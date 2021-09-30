@@ -1,83 +1,121 @@
+use anyhow::{anyhow,Result};
 use chrono::prelude::*;
-use reqwest::Url;
-use serde::{Deserialize, Deserializer};
 use reqwest::header::USER_AGENT;
+use reqwest::Url;
+use serde::{de, Deserialize, Deserializer};
+use std::collections::HashMap;
+use std::error::Error;
 
-#[derive(Debug, Deserialize)]
+/// fund information
+#[allow(non_snake_case)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd)]
 pub struct FundData {
+    #[serde(alias = "FSRQ")]
     #[serde(deserialize_with = "deserialize_with_date")]
-    date: NaiveDate, // 净值日期
-    #[serde(deserialize_with = "deserialize_with_net_value")]
-    net_value: u32, // 单位净值
-    #[serde(deserialize_with = "deserialize_with_net_value")]
-    accumulate_value: u32, //累计净值
-    #[serde(deserialize_with = "deserialize_with_grow_rate")]
-    grow_rate: i32, //日增长率
-    #[serde(deserialize_with = "deserialize_with_trade_status")]
-    buy_status: bool, //申购状态
-    #[serde(deserialize_with = "deserialize_with_trade_status")]
-    sell_status: bool, //赎回状态
+    pub(crate) date: NaiveDate, // 净值日期
+    #[serde(alias = "DWJZ")]
+    #[serde(deserialize_with = "deserialize_with_price")]
+    pub(crate) unit_nav: u32, // 单位净值
+    #[serde(alias = "LJJZ")]
+    #[serde(deserialize_with = "deserialize_with_price")]
+    pub(crate) accumulate_nav: u32, //累计净值
+    #[serde(skip_deserializing)]
+    SDATE: Option<()>,
+    #[serde(skip_deserializing)]
+    ACTUALSYI: (),
+    #[serde(skip_deserializing)]
+    NAVTYPE: (),
+    #[serde(skip_deserializing)]
+    JZZZL: (),
+    #[serde(skip_deserializing)]
+    SGZT: (),
+    #[serde(skip_deserializing)]
+    SHZT: String,
     #[serde(deserialize_with = "deserialize_with_dividend")]
-    dividend: Option<u32>, //分红配送
+    #[serde(alias = "FHFCZ")]
+    pub(crate) dividend: Option<u32>, //分红
+    #[serde(skip_deserializing)]
+    FHFCBZ: (),
+    #[serde(skip_deserializing)]
+    DTYPE: (),
+    #[serde(skip_deserializing)]
+    FHSP: (),
 }
 
 fn deserialize_with_date<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let mut s: String = Deserialize::deserialize(deserializer)?;
-    unimplemented!()
+    let s: String = Deserialize::deserialize(deserializer)?;
+    NaiveDate::parse_from_str(&s, "%Y-%m-%d").map_err(de::Error::custom)
 }
 
-fn deserialize_with_net_value<'de, D>(deserializer: D) -> Result<u32, D::Error>
+fn deserialize_with_price<'de, D>(deserializer: D) -> Result<u32, D::Error>
 where
     D: Deserializer<'de>,
 {
-    let mut s: String = Deserialize::deserialize(deserializer)?;
-    unimplemented!()
-}
-
-fn deserialize_with_grow_rate<'de, D>(deserializer: D) -> Result<i32, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let mut s: String = Deserialize::deserialize(deserializer)?;
-    unimplemented!()
-}
-
-fn deserialize_with_trade_status<'de, D>(deserializer: D) -> Result<bool, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let mut s: String = Deserialize::deserialize(deserializer)?;
-    unimplemented!()
+    let s: String = Deserialize::deserialize(deserializer)?;
+    let true_price = s.parse::<f32>();
+    match true_price {
+        Ok(val) => Ok((val * 10000.0) as u32),
+        Err(_) => Err(de::Error::custom(format!("can't parse f32{}", s))),
+    }
 }
 fn deserialize_with_dividend<'de, D>(deserializer: D) -> Result<Option<u32>, D::Error>
 where
     D: Deserializer<'de>,
 {
     let mut s: String = Deserialize::deserialize(deserializer)?;
-    unimplemented!()
+    if s.len() == 0 {
+        return Ok(None);
+    }
+    let true_price = s.parse::<f32>();
+    match true_price {
+        Ok(val) => Ok(Some((val * 10000.0) as u32)),
+        Err(_) => Err(de::Error::custom(format!("can't parse f32{}", s))),
+    }
 }
 
 // 查询指定日期范围内的基金数据
-fn get_fund_history(code: u32, start_date: NaiveDate, end_date: NaiveDate) -> Vec<FundData> {
+fn get_fund_history(
+    code: u32,
+    start_date: NaiveDate,
+    end_date: NaiveDate,
+) -> Result<Vec<FundData>> {
+    let client = reqwest::blocking::Client::new();
     let params = [
-        ("type", "lsjz"),
-        ("code", &format!("{:0>6}", code)),
-        ("page", "1"),
-        ("sdate", &start_date.format("%Y-%m-%d").to_string()),
-        ("edate", &end_date.format("%Y-%m-%d").to_string()),
-        ("per", "20"),
+        ("fundCode", format!("{:0>6}", code)),
+        ("pageIndex", "1".to_string()),
+        ("pageSize", "65535".to_string()),
     ];
-    let url =
-        Url::parse_with_params("http://fund.eastmoney.com/f10/F10DataApi.aspx?", &params).unwrap();
+    let url = Url::parse_with_params(
+        "http://api.fund.eastmoney.com/f10/lsjz?callback=jQuery18304038998523093684_1586160530315",
+        &params,
+    )?;
     println!("{}", url);
-    let resp = reqwest::blocking::get(url).unwrap().text();
-    println!("{:?}", resp);
-    Vec::new()
+    let res = client
+        .get(url)
+        .header(
+            "Referer",
+            &format!("http://fundf10.eastmoney.com/jjjz_{:0>6}.html", code),
+        )
+        .send()?;
+    let content = res.text()?;
+    let begin = content.find(r"[").unwrap();
+    let end = content.find(r"]").unwrap();
+    let all_fund_data: Vec<FundData> = serde_json::from_str(&content[begin..=end])?;
+    let ret: Vec<FundData> = all_fund_data
+        .into_iter()
+        .filter(|x| x.date >= start_date && x.date <= end_date)
+        .rev()
+        .collect();
+    if ret.is_empty() {
+        // Err(anyhow::Error::new(error).context("empty"))
+        Err(anyhow!("can't fetch fund data between {} and {}", start_date, end_date))
+    } else {
+        Ok(ret)
+    }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -85,9 +123,17 @@ mod tests {
 
     #[test]
     fn test_get_fund_history() {
-        let start_time = NaiveDate::from_ymd(2020, 9, 1);
-        let end_time = NaiveDate::from_ymd(2020, 9, 30);
-        let code = 007994;
-        get_fund_history(code, start_time, end_time);
+        let code = 002021;
+        let start_date = NaiveDate::from_ymd(2021, 10, 1);
+        let end_date = NaiveDate::from_ymd(2021, 10, 30);
+        let ret = get_fund_history(code, start_date, end_date);
+        println!("{:?}", ret);
+    }
+
+    #[test]
+    fn test_deserialize_fund_data() {
+        let input = "{\"FSRQ\":\"2021-09-15\",\"DWJZ\":\"1.4640\",\"LJJZ\":\"5.0330\",\"SDATE\":null,\"ACTUALSYI\":\"\",\"NAVTYPE\":\"1\",\"JZZZL\":\"-1.45\",\"SGZT\":\"限制大额申购\",\"SHZT\":\"开放赎回\",\"FHFCZ\":\"0.03\",\"FHFCBZ\":\"0\",\"DTYPE\":null,\"FHSP\":\"每份派现金0.0300元\"}";
+        let res = serde_json::from_str::<FundData>(input);
+        println!("{:#?}", res);
     }
 }
