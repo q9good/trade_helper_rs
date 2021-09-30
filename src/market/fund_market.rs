@@ -1,4 +1,4 @@
-use anyhow::{anyhow,Result};
+use anyhow::{anyhow, Result};
 use chrono::prelude::*;
 use reqwest::header::USER_AGENT;
 use reqwest::Url;
@@ -30,7 +30,7 @@ pub struct FundData {
     #[serde(skip_deserializing)]
     SGZT: (),
     #[serde(skip_deserializing)]
-    SHZT: String,
+    SHZT: (),
     #[serde(deserialize_with = "deserialize_with_dividend")]
     #[serde(alias = "FHFCZ")]
     pub(crate) dividend: Option<u32>, //分红
@@ -40,6 +40,31 @@ pub struct FundData {
     DTYPE: (),
     #[serde(skip_deserializing)]
     FHSP: (),
+}
+
+impl FundData {
+    pub(crate) fn new(
+        date: NaiveDate,
+        unit_nav: u32,
+        accumulate_nav: u32,
+        dividend: Option<u32>,
+    ) -> Self {
+        FundData {
+            date,
+            unit_nav,
+            accumulate_nav,
+            SDATE: None,
+            ACTUALSYI: (),
+            NAVTYPE: (),
+            JZZZL: (),
+            SGZT: (),
+            SHZT: (),
+            dividend,
+            FHFCBZ: (),
+            DTYPE: (),
+            FHSP: (),
+        }
+    }
 }
 
 fn deserialize_with_date<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
@@ -65,8 +90,8 @@ fn deserialize_with_dividend<'de, D>(deserializer: D) -> Result<Option<u32>, D::
 where
     D: Deserializer<'de>,
 {
-    let mut s: String = Deserialize::deserialize(deserializer)?;
-    if s.len() == 0 {
+    let s: String = Deserialize::deserialize(deserializer)?;
+    if s.is_empty() {
         return Ok(None);
     }
     let true_price = s.parse::<f32>();
@@ -101,8 +126,8 @@ fn get_fund_history(
         )
         .send()?;
     let content = res.text()?;
-    let begin = content.find(r"[").unwrap();
-    let end = content.find(r"]").unwrap();
+    let begin = content.find('[').unwrap();
+    let end = content.find(']').unwrap();
     let all_fund_data: Vec<FundData> = serde_json::from_str(&content[begin..=end])?;
     let ret: Vec<FundData> = all_fund_data
         .into_iter()
@@ -111,7 +136,11 @@ fn get_fund_history(
         .collect();
     if ret.is_empty() {
         // Err(anyhow::Error::new(error).context("empty"))
-        Err(anyhow!("can't fetch fund data between {} and {}", start_date, end_date))
+        Err(anyhow!(
+            "can't fetch fund data between {} and {}",
+            start_date,
+            end_date
+        ))
     } else {
         Ok(ret)
     }
@@ -124,10 +153,25 @@ mod tests {
     #[test]
     fn test_get_fund_history() {
         let code = 002021;
-        let start_date = NaiveDate::from_ymd(2021, 10, 1);
-        let end_date = NaiveDate::from_ymd(2021, 10, 30);
+        let start_date = NaiveDate::from_ymd(2021, 9, 1);
+        let end_date = NaiveDate::from_ymd(2021, 9, 1);
         let ret = get_fund_history(code, start_date, end_date);
-        println!("{:?}", ret);
+        let expect = vec![FundData {
+            date: NaiveDate::from_ymd(2021, 9, 1),
+            unit_nav: 12880,
+            accumulate_nav: 38280,
+            SDATE: None,
+            ACTUALSYI: (),
+            NAVTYPE: (),
+            JZZZL: (),
+            SGZT: (),
+            SHZT: (),
+            dividend: None,
+            FHFCBZ: (),
+            DTYPE: (),
+            FHSP: (),
+        }];
+        assert_eq!(expect, ret.unwrap())
     }
 
     #[test]
