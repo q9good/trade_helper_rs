@@ -6,11 +6,13 @@ use serde::{de, Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::error::Error;
 
+use super::MarketInfo;
+
 /// fund trade status
 pub enum FundStatus {
     BuyAvailable,
     SellAvailable,
-    TransForbidden
+    TransForbidden,
 }
 
 /// fund information
@@ -155,6 +157,8 @@ pub(crate) fn get_fund_history(
         Ok(ret)
     }
 }
+
+impl MarketInfo for FundData {}
 
 #[cfg(test)]
 mod tests {
