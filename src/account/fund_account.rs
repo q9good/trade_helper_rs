@@ -86,4 +86,67 @@ impl UpdateAccountItem for FundAccount {
 mod tests {
     use super::*;
     use chrono::NaiveDate;
+
+    #[test]
+    fn test_update_account_without_dividend() {
+        let mut account = FundAccount {
+            net_value: 12880,
+            accumulate_value: 22880,
+            shares: 1000,
+            cash_bonus: 0,
+            total_value: 100000,
+        };
+
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        account.update_account(&fund_data);
+        println!("{:?}", account);
+    }
+
+    #[test]
+    fn test_update_account_with_dividend() {
+        let mut account = FundAccount {
+            // fund_code: 002021,
+            net_value: 12880,
+            accumulate_value: 22880,
+            shares: 1000,
+            cash_bonus: 0,
+            total_value: 100000,
+        };
+
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
+        account.update_account(&fund_data);
+        println!("{:?}", account);
+    }
+
+    #[test]
+    fn test_account_after_buy() {
+        let mut account = FundAccount {
+            // fund_code: 002021,
+            net_value: 12880,
+            accumulate_value: 22880,
+            shares: 1000,
+            cash_bonus: 0,
+            total_value: 100000,
+        };
+
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
+        account.buy_with_volume(&fund_data, 100);
+        println!("{:?}", account);
+    }
+
+    #[test]
+    fn test_account_after_sell() {
+        let mut account = FundAccount {
+            // fund_code: 002021,
+            net_value: 12880,
+            accumulate_value: 22880,
+            shares: 1000,
+            cash_bonus: 0,
+            total_value: 100000,
+        };
+
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
+        account.sell_with_volume(&fund_data, 100);
+        println!("{:?}", account);
+    }
 }
