@@ -8,15 +8,15 @@ use crate::market::MarketInfo;
 pub trait UpdateAccountItem {
     type MarketData;
     // 根据行情更新账户信息
-    fn update_account(&mut self, data: &Self::MarketData) -> i32;
+    fn update_account(&mut self, data: &Self::MarketData) -> f32;
     // 以数量买入
-    fn buy_with_volume(&mut self, data: &Self::MarketData, volume: u32) -> i32;
+    fn buy_with_volume(&mut self, data: &Self::MarketData, volume: f32) -> f32;
     // 以总价买入
-    fn buy_with_cost(&mut self, data: &Self::MarketData, price: u32) -> i32;
+    fn buy_with_cost(&mut self, data: &Self::MarketData, price: f32) -> f32;
     // 以数量卖出
-    fn sell_with_volume(&mut self, data: &Self::MarketData, volume: u32) -> i32;
+    fn sell_with_volume(&mut self, data: &Self::MarketData, volume: f32) -> f32;
     // 以持仓比例卖出
-    fn sell_with_proportion(&mut self, data: &Self::MarketData, proportion: f32) -> i32;
+    fn sell_with_proportion(&mut self, data: &Self::MarketData, proportion: f32) -> f32;
 }
 /// 交易信息
 #[derive(Debug)]
@@ -68,7 +68,7 @@ where
     }
 
     // 以指定总价买入
-    fn buy_with_cost<M: MarketInfo>(&mut self, info: M, price: u32) {
+    fn buy_with_cost<M: MarketInfo>(&mut self, info: M, price: f32) {
         unimplemented!()
     }
 

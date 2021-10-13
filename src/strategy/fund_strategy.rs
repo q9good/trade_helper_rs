@@ -16,11 +16,11 @@ fn run_fund_aip_strategy(fund: u32) -> HashMap<u32, FundAccount> {
     if let Ok(events) = fund_history {
         let mut event_iter = events.iter();
         let event = event_iter.next().unwrap();
-        fund_account.buy_with_cost(event, 1000);
+        fund_account.buy_with_cost(event, 1000.0);
         trade_date = event.date;
         for event in event_iter {
             if event.date - trade_date > Duration::days(30) {
-                fund_account.buy_with_cost(event, 1000);
+                fund_account.buy_with_cost(event, 1000.0);
                 trade_date = event.date;
             } else {
                 fund_account.update_account(event);
@@ -35,7 +35,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_run_fund_aip(){
+    fn test_run_fund_aip() {
         unimplemented!()
-    } 
+    }
 }
