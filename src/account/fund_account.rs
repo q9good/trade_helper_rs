@@ -41,9 +41,9 @@ impl UpdateAccountItem for FundAccount {
         let prev_value = self.total_value;
         self.total_value = (self.net_value * self.shares) as u64;
         if prev_value > self.total_value {
-            ((prev_value - self.total_value) / 1000000) as f32 * -1.0
+            (prev_value - self.total_value) as f32 / -1000000.0
         } else {
-            ((self.total_value - prev_value) / 1000000) as f32
+            (self.total_value - prev_value) as f32 / 1000000.0
         }
     }
     fn buy_with_volume(&mut self, data: &FundData, volume: f32) -> f32 {
@@ -53,38 +53,39 @@ impl UpdateAccountItem for FundAccount {
         let prev_value = self.total_value;
         self.total_value = (self.net_value * self.shares) as u64;
         if prev_value > self.total_value {
-            ((prev_value - self.total_value) / 1000000) as f32 * -1.0
+            (prev_value - self.total_value) as f32 / -1000000.0
         } else {
-            ((self.total_value - prev_value) / 1000000) as f32
+            (self.total_value - prev_value) as f32 / 1000000.0
         }
     }
     fn buy_with_cost(&mut self, data: &Self::MarketData, price: f32) -> f32 {
-        self.shares += (price * 100.0 / (data.unit_nav as f32) / 10000.0) as u32;
+        self.shares += ((price / ((data.unit_nav as f32) / 10000.0)) * 100.0) as u32;
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
         let prev_value = self.total_value;
         self.total_value = (self.net_value * self.shares) as u64;
         if prev_value > self.total_value {
-            ((prev_value - self.total_value) / 1000000) as f32 * -1.0
+            (prev_value - self.total_value) as f32 / -1000000.0
         } else {
-            ((self.total_value - prev_value) / 1000000) as f32
+            (self.total_value - prev_value) as f32 / 1000000.0
         }
     }
     fn sell_with_volume(&mut self, data: &FundData, volume: f32) -> f32 {
-        let volume = (volume * 100.0) as u32;
-        if volume > self.shares {
-            self.shares = 0;
+        let volume = if volume < self.shares as f32 / 100.0 {
+            (volume * 100.0) as u32
         } else {
-            self.shares -= volume;
-        }
+            self.shares
+        };
+        self.shares -= volume;
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
         let prev_value = self.total_value;
         self.total_value = (self.net_value * self.shares) as u64;
+        let sold = (self.net_value as u64 * volume as u64) as f64 / 1000000.0;
         if prev_value > self.total_value {
-            ((prev_value - self.total_value) / 1000000) as f32 * -1.0
+            sold as f32 + (prev_value - self.total_value) as f32 / -1000000.0
         } else {
-            ((self.total_value - prev_value) / 1000000) as f32
+            sold as f32 + (self.total_value - prev_value) as f32 / 1000000.0
         }
     }
 
@@ -114,7 +115,7 @@ mod tests {
     use chrono::NaiveDate;
 
     #[test]
-    fn test_update_account_without_dividend() {
+    fn test_update_account_without_dividend_rise() {
         let mut account = FundAccount {
             net_value: 12880,
             accumulate_value: 22880,
@@ -125,7 +126,26 @@ mod tests {
 
         let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
         let diff = account.update_account(&fund_data);
-        println!("{}-{:?}",diff, account);
+        println!("{}-{:?}", diff, account);
+        assert_eq!(diff, 71.2);
+        assert_eq!(account.total_value, 200000000);
+    }
+
+    #[test]
+    fn test_update_account_without_dividend_fall() {
+        let mut account = FundAccount {
+            net_value: 12880,
+            accumulate_value: 22880,
+            shares: 10000,
+            cash_bonus: 0,
+            total_value: 128800000,
+        };
+
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 10000, 30000, None);
+        let diff = account.update_account(&fund_data);
+        println!("{}-{:?}", diff, account);
+        assert_eq!(diff, -28.8);
+        assert_eq!(account.total_value, 100000000);
     }
 
     #[test]
@@ -140,12 +160,14 @@ mod tests {
         };
 
         let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
-        account.update_account(&fund_data);
+        let diff = account.update_account(&fund_data);
         println!("{:?}", account);
+        assert_eq!(account.total_value, 201000000);
+        assert_eq!(diff, 72.2);
     }
 
     #[test]
-    fn test_account_after_buy() {
+    fn test_account_after_buy_volume() {
         let mut account = FundAccount {
             // fund_code: 002021,
             net_value: 12880,
@@ -156,8 +178,30 @@ mod tests {
         };
 
         let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
-        account.buy_with_volume(&fund_data, 100.0);
+        let diff = account.buy_with_volume(&fund_data, 100.0);
         println!("{:?}", account);
+        assert_eq!(account.shares, 20000);
+        assert_eq!(account.total_value, 400000000);
+        assert_eq!(diff, 271.2);
+    }
+
+    #[test]
+    fn test_account_after_buy_price() {
+        let mut account = FundAccount {
+            // fund_code: 002021,
+            net_value: 12880,
+            accumulate_value: 22880,
+            shares: 10000,
+            cash_bonus: 0,
+            total_value: 128800000,
+        };
+
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
+        let diff = account.buy_with_cost(&fund_data, 200.0);
+        println!("{:?}", account);
+        assert_eq!(account.shares, 20000);
+        assert_eq!(account.total_value, 400000000);
+        assert_eq!(diff, 271.2);
     }
 
     #[test]
@@ -172,7 +216,7 @@ mod tests {
         };
 
         let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
-        account.sell_with_volume(&fund_data, 100.0);
-        println!("{:?}", account);
+        let diff = account.sell_with_volume(&fund_data, 50.0);
+        println!("{}-{:?}", diff, account);
     }
 }
