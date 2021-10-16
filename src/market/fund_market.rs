@@ -6,6 +6,15 @@ use serde::{de, Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::error::Error;
 
+use super::MarketInfo;
+
+/// fund trade status
+pub enum FundStatus {
+    BuyAvailable,
+    SellAvailable,
+    TransForbidden,
+}
+
 /// fund information
 #[allow(non_snake_case)]
 #[derive(Debug, Deserialize, PartialEq, PartialOrd)]
@@ -27,10 +36,13 @@ pub struct FundData {
     NAVTYPE: (),
     #[serde(skip_deserializing)]
     JZZZL: (),
+    //Todo: deserialize it
     #[serde(skip_deserializing)]
-    SGZT: (),
+    #[serde(alias = "SGZT")]
+    buy_status: (),
     #[serde(skip_deserializing)]
-    SHZT: (),
+    #[serde(alias = "SHZT")]
+    sell_status: (),
     #[serde(deserialize_with = "deserialize_with_dividend")]
     #[serde(alias = "FHFCZ")]
     pub(crate) dividend: Option<u32>, //分红
@@ -57,8 +69,8 @@ impl FundData {
             ACTUALSYI: (),
             NAVTYPE: (),
             JZZZL: (),
-            SGZT: (),
-            SHZT: (),
+            buy_status: (),
+            sell_status: (),
             dividend,
             FHFCBZ: (),
             DTYPE: (),
@@ -102,7 +114,7 @@ where
 }
 
 // 查询指定日期范围内的基金数据
-fn get_fund_history(
+pub(crate) fn get_fund_history(
     code: u32,
     start_date: NaiveDate,
     end_date: NaiveDate,
@@ -146,6 +158,12 @@ fn get_fund_history(
     }
 }
 
+impl MarketInfo for FundData {
+    fn get_time(&self) -> NaiveDateTime {
+        self.date.and_hms(19, 0, 0)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -164,8 +182,8 @@ mod tests {
             ACTUALSYI: (),
             NAVTYPE: (),
             JZZZL: (),
-            SGZT: (),
-            SHZT: (),
+            buy_status: (),
+            sell_status: (),
             dividend: None,
             FHFCBZ: (),
             DTYPE: (),
