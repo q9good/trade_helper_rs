@@ -92,7 +92,8 @@ impl UpdateAccountItem for FundAccount {
         self.check_dividend(data);
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
-        match proportion {
+        let sell_proportion = if proportion > 1.0 { 1.0 } else { proportion };
+        match sell_proportion {
             f if (0.0..=1.0).contains(&f) => {
                 let sell_volume = (self.shares as f32 * proportion) as u32;
                 self.shares -= sell_volume;
