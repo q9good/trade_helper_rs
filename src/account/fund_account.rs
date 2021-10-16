@@ -16,20 +16,9 @@ pub struct FundAccount {
     pub(crate) total_value: u64, //基金总价值
 }
 
-impl FundAccount {
-    pub(crate) fn new() -> Self {
-        FundAccount {
-            net_value: 0,
-            accumulate_value: 0,
-            shares: 0,
-            cash_bonus: 0,
-            total_value: 0,
-        }
-    }
-}
-
 impl UpdateAccountItem for FundAccount {
     type MarketData = FundData;
+    // fn default() -> Self {}
     fn update_account(&mut self, data: &FundData) {
         if data.dividend.is_some() {
             // 红利再投
@@ -42,6 +31,13 @@ impl UpdateAccountItem for FundAccount {
     }
 
     fn get_current_value(&self) -> f32 {
+        self.net_value as f32 * 0.0001
+    }
+    fn get_current_volume(&self) -> f32 {
+        self.shares as f32 * 0.01
+    }
+
+    fn get_current_asset(&self) -> f32 {
         (self.total_value as f64 * 0.000001) as f32
     }
 

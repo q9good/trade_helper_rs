@@ -10,7 +10,7 @@ fn run_fund_aip_strategy(fund: u32) -> HashMap<u32, FundAccount> {
     let today = NaiveDate::from_num_days_from_ce(Local::today().num_days_from_ce());
     let fund_history = get_fund_history(fund, start_date, today);
     let mut accounts = HashMap::new();
-    accounts.insert(fund, FundAccount::new());
+    accounts.insert(fund, FundAccount::default());
     let mut fund_account = accounts.get_mut(&fund).unwrap();
     let mut trade_date;
     if let Ok(events) = fund_history {
@@ -36,6 +36,5 @@ mod tests {
 
     #[test]
     fn test_run_fund_aip() {
-        unimplemented!()
     }
 }

@@ -159,8 +159,8 @@ pub(crate) fn get_fund_history(
 }
 
 impl MarketInfo for FundData {
-    fn get_time(&self)->NaiveDateTime {
-        self.date.and_hms(19,0,0)
+    fn get_time(&self) -> NaiveDateTime {
+        self.date.and_hms(19, 0, 0)
     }
 }
 
