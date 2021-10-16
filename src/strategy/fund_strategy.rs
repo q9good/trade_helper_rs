@@ -35,6 +35,5 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_run_fund_aip() {
-    }
+    fn test_run_fund_aip() {}
 }

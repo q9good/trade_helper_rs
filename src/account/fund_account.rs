@@ -3,28 +3,34 @@ use crate::market::fund_market::FundData;
 
 /// 基金账户信息，为避免浮点运算，部分值乘以一定倍数。
 /// 对外接口使用真实值
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub struct FundAccount {
     // fund_code: u32,        // 基金代码
     // 净值是其真实价值乘以10000,避免浮点数运算
-    pub(crate) net_value: u32, // 单位净值
-    accumulate_value: u32,     //累计净值
+    pub(crate) net_value: u32,        // 单位净值
+    pub(crate) accumulate_value: u32, //累计净值
     // 持有份额是其真实值乘以100,避免浮点数运算
-    pub(crate) shares: u32, //持有份额
-    cash_bonus: u32,        //现金分红，默认为红利再投
+    pub(crate) shares: u32,     //持有份额
+    pub(crate) cash_bonus: u32, //现金分红，默认为红利再投
     // 账面价值是真实值乘以1000000
     pub(crate) total_value: u64, //基金总价值
+}
+
+impl FundAccount {
+    fn check_dividend(&mut self, data: &FundData) {
+        if data.dividend.is_some() {
+            // 红利再投
+            self.cash_bonus += data.dividend.unwrap() * self.shares;
+            self.shares += data.dividend.unwrap() * self.shares / data.unit_nav;
+        }
+    }
 }
 
 impl UpdateAccountItem for FundAccount {
     type MarketData = FundData;
     // fn default() -> Self {}
     fn update_account(&mut self, data: &FundData) {
-        if data.dividend.is_some() {
-            // 红利再投
-            self.cash_bonus += data.dividend.unwrap() * self.shares;
-            self.shares += data.dividend.unwrap() * self.shares / data.unit_nav;
-        }
+        self.check_dividend(data);
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
         self.total_value = (self.net_value * self.shares) as u64;
@@ -42,6 +48,7 @@ impl UpdateAccountItem for FundAccount {
     }
 
     fn buy_with_volume(&mut self, data: &FundData, volume: f32) -> TradeDetail {
+        self.check_dividend(data);
         self.shares += (volume * 100.0) as u32;
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
@@ -52,6 +59,7 @@ impl UpdateAccountItem for FundAccount {
         })
     }
     fn buy_with_cost(&mut self, data: &Self::MarketData, price: f32) -> TradeDetail {
+        self.check_dividend(data);
         let increment = ((price / ((data.unit_nav as f32) * 0.0001)) * 100.0) as u32;
         self.shares += increment;
         self.net_value = data.unit_nav;
@@ -63,6 +71,8 @@ impl UpdateAccountItem for FundAccount {
         })
     }
     fn sell_with_volume(&mut self, data: &FundData, volume: f32) -> TradeDetail {
+        // Todo :卖出当天能享受分红否？
+        self.check_dividend(data);
         let decrement = if volume < self.shares as f32 * 0.01 {
             (volume * 100.0) as u32
         } else {
@@ -79,6 +89,7 @@ impl UpdateAccountItem for FundAccount {
     }
 
     fn sell_with_proportion(&mut self, data: &FundData, proportion: f32) -> TradeDetail {
+        self.check_dividend(data);
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
         match proportion {
@@ -169,7 +180,7 @@ mod tests {
             deal_volume: 100.0,
         });
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
         let detail = account.buy_with_volume(&fund_data, 100.0);
         assert_eq!(account.shares, 20000);
         assert_eq!(account.total_value, 400000000);
@@ -191,7 +202,7 @@ mod tests {
             deal_volume: 100.0,
         });
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
         let detail = account.buy_with_cost(&fund_data, 200.0);
         assert_eq!(account.shares, 20000);
         assert_eq!(account.total_value, 400000000);
@@ -213,7 +224,7 @@ mod tests {
             deal_volume: 50.0,
         });
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
         let detail = account.sell_with_volume(&fund_data, 50.0);
         assert_eq!(account.shares, 5000);
         assert_eq!(account.total_value, 100000000);
@@ -235,7 +246,7 @@ mod tests {
             deal_volume: 50.0,
         });
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
         let detail = account.sell_with_proportion(&fund_data, 0.5);
         // println!("{:?}", account);
         assert_eq!(account.shares, 5000);
