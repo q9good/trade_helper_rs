@@ -30,7 +30,7 @@ pub trait UpdateAccountItem {
     fn sell_with_proportion(&mut self, data: &Self::MarketData, proportion: f32) -> TradeDetail;
 }
 /// 交易信息
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub struct TradeItem {
     // 成交价格
     deal_price: f32,
@@ -38,7 +38,7 @@ pub struct TradeItem {
     deal_volume: f32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub enum TradeDetail {
     Buy(TradeItem),
     Sell(TradeItem),
@@ -48,13 +48,13 @@ impl TradeDetail {
     //Todo :考虑手续费
     fn calc_cost_or_earning(&self) -> f32 {
         match self {
-            Self::Buy(detail) => detail.deal_price * detail.deal_volume,
-            Self::Sell(detail) => detail.deal_price * detail.deal_volume * -1.0,
+            Self::Buy(detail) => detail.deal_price * detail.deal_volume * -1.0,
+            Self::Sell(detail) => detail.deal_price * detail.deal_volume,
         }
     }
 }
 /// 交易记录
-#[derive(Debug)]
+#[derive(Debug, PartialEq, PartialOrd)]
 pub struct TradeHistory {
     // 成交时间
     trade_time: NaiveDateTime,
@@ -75,7 +75,7 @@ pub struct Account<T: UpdateAccountItem> {
     trade_history: Vec<TradeHistory>,
     // 账面价值
     account_value: f32,
-    // 账户余额
+    // 账户余额,Todo：对于回测，暂时先假设资金无限
     balance_price: f32,
 }
 
@@ -83,6 +83,15 @@ impl<T> Account<T>
 where
     T: UpdateAccountItem + Default,
 {
+    /// 新建账户
+    fn new() -> Self {
+        Account {
+            hold_detail: HashMap::<u32, T>::new(),
+            trade_history: Vec::<TradeHistory>::new(),
+            account_value: 0.0,
+            balance_price: 0.0,
+        }
+    }
     /// 获取持仓单价
     fn get_object_price(&self, code: u32) -> Option<f32> {
         self.hold_detail.get(&code).map(|x| x.get_current_value())
@@ -176,9 +185,242 @@ where
                 trade_detail: detail,
             });
             // 检查是否全部卖出
-            if (proportion-1.0).abs() < 0.0001 {
+            if (proportion - 1.0).abs() < 0.0001 {
                 self.hold_detail.remove_entry(&code);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use chrono::NaiveDate;
+
+    use crate::market::fund_market::FundData;
+
+    use super::{fund_account::FundAccount, *};
+
+    /// ### 基金账户测试
+    /// ----
+    /// 只测试以指定价格买入
+    #[test]
+    fn test_get_ops_when_account_is_empty() {
+        let account = Account::<FundAccount>::new();
+        assert_eq!(None, account.get_object_volume(000001));
+        assert_eq!(None, account.get_object_price(000001));
+        assert_eq!(None, account.get_object_assets(000001));
+    }
+
+    #[test]
+    fn test_buy_new_fund_with_price() {
+        let mut account = Account::<FundAccount>::new();
+        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let expect_hold_detail = FundAccount {
+            net_value: fund_data.unit_nav,
+            accumulate_value: fund_data.accumulate_nav,
+            shares: 5000,
+            cash_bonus: 0,
+            total_value: 100000000,
+        };
+        let expect_trade_history = TradeHistory {
+            trade_time: fund_data.date.and_hms(19, 0, 0),
+            trade_obj: 1,
+            trade_detail: TradeDetail::Buy(TradeItem {
+                deal_price: 2.0,
+                deal_volume: 50.0,
+            }),
+        };
+
+        account.buy_with_cost(000001, fund_data, 100.0);
+
+        assert!(account.hold_detail.get(&000001).is_some());
+        assert!(account.hold_detail.get(&000002).is_none());
+        assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
+        assert_eq!(expect_trade_history, account.trade_history.pop().unwrap());
+    }
+
+    #[test]
+    fn test_buy_same_fund_twice() {
+        let mut account = Account::<FundAccount>::new();
+        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 30000, None);
+        let expect_hold_detail = FundAccount {
+            net_value: fund_data2.unit_nav,
+            accumulate_value: fund_data2.accumulate_nav,
+            shares: 10000,
+            cash_bonus: 0,
+            total_value: 200000000,
+        };
+        let expect_trade_history = TradeHistory {
+            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_obj: 1,
+            trade_detail: TradeDetail::Buy(TradeItem {
+                deal_price: 2.0,
+                deal_volume: 50.0,
+            }),
+        };
+
+        account.buy_with_cost(000001, fund_data1, 100.0);
+        account.buy_with_cost(000001, fund_data2, 100.0);
+
+        assert!(account.hold_detail.get(&000001).is_some());
+        assert!(account.hold_detail.get(&000002).is_none());
+        assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
+        assert_eq!(expect_trade_history, account.trade_history.pop().unwrap());
+    }
+
+    #[test]
+    fn test_buy_two_different_funds() {
+        let mut account = Account::<FundAccount>::new();
+        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 30000, None);
+        let expect_hold_detail = FundAccount {
+            net_value: fund_data2.unit_nav,
+            accumulate_value: fund_data2.accumulate_nav,
+            shares: 5000,
+            cash_bonus: 0,
+            total_value: 100000000,
+        };
+        let expect_trade_history = TradeHistory {
+            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_obj: 2,
+            trade_detail: TradeDetail::Buy(TradeItem {
+                deal_price: 2.0,
+                deal_volume: 50.0,
+            }),
+        };
+
+        account.buy_with_cost(000001, fund_data1, 100.0);
+        account.buy_with_cost(000002, fund_data2, 100.0);
+
+        assert!(account.hold_detail.get(&000001).is_some());
+        assert!(account.hold_detail.get(&000002).is_some());
+        assert_eq!(expect_hold_detail, account.hold_detail[&000002]);
+        assert_eq!(expect_trade_history, account.trade_history.pop().unwrap());
+    }
+
+    #[test]
+    fn test_get_ops_with_valid_account() {
+        let mut account = Account::<FundAccount>::new();
+        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 30000, None);
+
+        account.buy_with_cost(000001, fund_data1, 100.0);
+        account.buy_with_cost(000002, fund_data2, 100.0);
+
+        assert_eq!(Some(50.0), account.get_object_volume(000001));
+        assert_eq!(Some(2.0), account.get_object_price(000001));
+        assert_eq!(Some(100.0), account.get_object_assets(000001));
+        assert_eq!(Some(50.0), account.get_object_volume(000002));
+        assert_eq!(Some(2.0), account.get_object_price(000002));
+        assert_eq!(Some(100.0), account.get_object_assets(000002));
+    }
+
+    #[test]
+    fn test_sell_fund_didnot_possess() {
+        let mut account = Account::<FundAccount>::new();
+        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 25000, 35000, None);
+        let expect_hold_detail = FundAccount {
+            net_value: fund_data1.unit_nav,
+            accumulate_value: fund_data1.accumulate_nav,
+            shares: 5000,
+            cash_bonus: 0,
+            total_value: 100000000,
+        };
+        let expect_trade_history = TradeHistory {
+            trade_time: fund_data1.date.and_hms(19, 0, 0),
+            trade_obj: 1,
+            trade_detail: TradeDetail::Buy(TradeItem {
+                deal_price: 2.0,
+                deal_volume: 50.0,
+            }),
+        };
+
+        account.buy_with_cost(000001, fund_data1, 100.0);
+
+        account.sell_with_volume(000002, fund_data2, 50.0);
+        assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
+        assert_eq!(expect_trade_history, account.trade_history.pop().unwrap());
+    }
+
+    #[test]
+    fn test_sell_same_fund_50_shares() {
+        let mut account = Account::<FundAccount>::new();
+        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 35000, None);
+        let expect_hold_detail = FundAccount {
+            net_value: fund_data2.unit_nav,
+            accumulate_value: fund_data2.accumulate_nav,
+            shares: 2500,
+            cash_bonus: 0,
+            total_value: 50000000,
+        };
+        let expect_trade_history = TradeHistory {
+            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_obj: 1,
+            trade_detail: TradeDetail::Sell(TradeItem {
+                deal_price: 2.0,
+                deal_volume: 25.0,
+            }),
+        };
+
+        account.buy_with_cost(000001, fund_data1, 100.0);
+
+        account.sell_with_volume(000001, fund_data2, 25.0);
+        assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
+        assert_eq!(&expect_trade_history, account.trade_history.last().unwrap());
+        assert_eq!(-50.0, account.balance_price);
+    }
+
+    #[test]
+    fn test_sell_fund_half() {
+        let mut account = Account::<FundAccount>::new();
+        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 35000, None);
+        let expect_hold_detail = FundAccount {
+            net_value: fund_data2.unit_nav,
+            accumulate_value: fund_data2.accumulate_nav,
+            shares: 2500,
+            cash_bonus: 0,
+            total_value: 50000000,
+        };
+        let expect_trade_history = TradeHistory {
+            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_obj: 1,
+            trade_detail: TradeDetail::Sell(TradeItem {
+                deal_price: 2.0,
+                deal_volume: 25.0,
+            }),
+        };
+
+        account.buy_with_cost(000001, fund_data1, 100.0);
+
+        account.sell_with_proportion(000001, fund_data2, 0.5);
+        assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
+        assert_eq!(&expect_trade_history, account.trade_history.last().unwrap());
+        assert_eq!(-50.0, account.balance_price);
+    }
+
+    #[test]
+    fn test_sell_fund_all() {
+        let mut account = Account::<FundAccount>::new();
+        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 35000, None);
+        let expect_trade_history = TradeHistory {
+            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_obj: 1,
+            trade_detail: TradeDetail::Sell(TradeItem {
+                deal_price: 2.0,
+                deal_volume: 50.0,
+            }),
+        };
+
+        account.buy_with_cost(000001, fund_data1, 100.0);
+
+        account.sell_with_proportion(000001, fund_data2, 1.0);
+        assert_eq!(None, account.hold_detail.get(&000001));
+        assert_eq!(&expect_trade_history, account.trade_history.last().unwrap());
+        assert_eq!(0.0, account.balance_price);
     }
 }
