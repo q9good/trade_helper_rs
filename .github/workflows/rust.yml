@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      run: rustup update stable
     - uses: actions/checkout@v2
     - name: Build
       run: cargo build --verbose
