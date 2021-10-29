@@ -6,7 +6,7 @@ use serde::{de, Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::error::Error;
 
-use super::MarketInfo;
+use super::QuantitativeMarket;
 
 /// fund trade status
 pub enum FundStatus {
@@ -144,7 +144,7 @@ pub(crate) fn get_fund_history(
     let ret: Vec<FundData> = all_fund_data
         .into_iter()
         .filter(|x| x.date >= start_date && x.date <= end_date)
-        .rev()
+        // .rev()
         .collect();
     if ret.is_empty() {
         // Err(anyhow::Error::new(error).context("empty"))
@@ -158,9 +158,42 @@ pub(crate) fn get_fund_history(
     }
 }
 
-impl MarketInfo for FundData {
-    fn get_time(&self) -> NaiveDateTime {
+impl QuantitativeMarket for FundData {
+    fn get_info_datetime(&self) -> NaiveDateTime {
         self.date.and_hms(19, 0, 0)
+    }
+
+    fn query_history_info(code: u32, start_date: NaiveDate, end_date: NaiveDate) -> Vec<FundData> {
+        let client = reqwest::blocking::Client::new();
+        let params = [
+            ("fundCode", format!("{:0>6}", code)),
+            ("pageIndex", "1".to_string()),
+            ("pageSize", "65535".to_string()),
+        ];
+        if let Ok(url) = Url::parse_with_params(
+        "http://api.fund.eastmoney.com/f10/lsjz?callback=jQuery18304038998523093684_1586160530315",
+        &params ) {
+            println!("{}", url);
+            if let Ok(res) = client
+                .get(url)
+                .header(
+                    "Referer",
+                    &format!("http://fundf10.eastmoney.com/jjjz_{:0>6}.html", code),
+                )
+                .send() {
+                if let Ok(content) = res.text(){
+                    let begin = content.find('[').unwrap();
+                    let end = content.find(']').unwrap();
+                    if let Ok(all_fund_data)= serde_json::from_str::<Vec<FundData>>(&content[begin..=end]) {
+                       return all_fund_data
+                            .into_iter()
+                            .filter(|x| x.date >= start_date && x.date <= end_date)
+                            .collect::<Vec<FundData>>()
+                    }
+                }
+            }
+        }
+        vec![]
     }
 }
 
