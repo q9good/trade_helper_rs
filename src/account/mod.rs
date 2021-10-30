@@ -5,11 +5,11 @@ use std::collections::HashMap;
 use chrono::NaiveDateTime;
 use serde::de;
 
-use crate::market::MarketInfo;
+use crate::market::QuantitativeMarket;
 
 /// 所有账户实现的方法，变更账户信息
 pub trait UpdateAccountItem {
-    type MarketData: MarketInfo;
+    type MarketData: QuantitativeMarket;
     /// 默认账户
     // fn default() -> Self;
     /// 根据行情更新当前持仓信息
@@ -121,7 +121,7 @@ where
         self.account_value = self.account_value - prev_asset + cur_asset;
         // 记录交易信息
         self.trade_history.push(TradeHistory {
-            trade_time: info.get_time(),
+            trade_time: info.get_info_datetime(),
             trade_obj: code,
             trade_detail: detail,
         });
@@ -139,7 +139,7 @@ where
         self.account_value = self.account_value - prev_asset + cur_asset;
         // 记录交易信息
         self.trade_history.push(TradeHistory {
-            trade_time: info.get_time(),
+            trade_time: info.get_info_datetime(),
             trade_obj: code,
             trade_detail: detail,
         });
@@ -157,7 +157,7 @@ where
             self.account_value = self.account_value - prev_asset + cur_asset;
             // 记录交易信息
             self.trade_history.push(TradeHistory {
-                trade_time: info.get_time(),
+                trade_time: info.get_info_datetime(),
                 trade_obj: code,
                 trade_detail: detail,
             });
@@ -180,7 +180,7 @@ where
             self.account_value = self.account_value - prev_asset + cur_asset;
             // 记录交易信息
             self.trade_history.push(TradeHistory {
-                trade_time: info.get_time(),
+                trade_time: info.get_info_datetime(),
                 trade_obj: code,
                 trade_detail: detail,
             });
@@ -422,5 +422,10 @@ mod test {
         assert_eq!(None, account.hold_detail.get(&000001));
         assert_eq!(&expect_trade_history, account.trade_history.last().unwrap());
         assert_eq!(0.0, account.balance_price);
+    }
+
+    #[test]
+    fn test_it() {
+        assert_eq!(true, true);
     }
 }
