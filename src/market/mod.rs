@@ -70,11 +70,7 @@ where
                 }
             })
             .collect();
-        let valid_time = first_ele_time
-            .iter()
-            .filter(|x| **x != future_time)
-            .collect::<Vec<_>>();
-        if valid_time.is_empty() {
+        if !first_ele_time.iter().any(|x| *x != future_time) {
             return None;
         }
 
@@ -82,5 +78,41 @@ where
         let position = first_ele_time.iter().position(|&x| x == *earliest).unwrap();
         let market_data = self.info[position].remove(0);
         Some((self.code[position], market_data))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::market::fund_market::FundData;
+
+    #[test]
+    fn test_new_two_funds() {
+        let start_date = NaiveDate::from_ymd(2021, 9, 1);
+        let end_date = NaiveDate::from_ymd(2021, 9, 7);
+        let codes = [002190_u32, 481010];
+        let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
+        assert_eq!(fund_mixer.code, codes);
+        assert_eq!(fund_mixer.info.len(), 2);
+        assert_eq!(fund_mixer.info[0].len(), 5);
+        assert_eq!(fund_mixer.info[1].len(), 5);
+    }
+
+    #[test]
+    fn test_two_funds_iter() {
+        let start_date = NaiveDate::from_ymd(2021, 9, 1);
+        let end_date = NaiveDate::from_ymd(2021, 9, 7);
+        let codes = [002190_u32, 481010];
+        let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
+        fund_mixer.for_each(|(code, info)| println!("{:?}: {}", info.date, code));
+    }
+
+    #[test]
+    fn test_unbalanced_two_funds_iter() {
+        let start_date = NaiveDate::from_ymd(2021, 10, 1);
+        let end_date = NaiveDate::from_ymd(2021, 10, 25);
+        let codes = [013606_u32, 481010];
+        let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
+        fund_mixer.for_each(|(code, info)| println!("{:?}: {}", info.date, code));
     }
 }

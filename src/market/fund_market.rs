@@ -173,6 +173,7 @@ impl QuantitativeMarket for FundData {
         if let Ok(url) = Url::parse_with_params(
         "http://api.fund.eastmoney.com/f10/lsjz?callback=jQuery18304038998523093684_1586160530315",
         &params ) {
+            #[cfg(test)]
             println!("{}", url);
             if let Ok(res) = client
                 .get(url)
@@ -188,6 +189,7 @@ impl QuantitativeMarket for FundData {
                        return all_fund_data
                             .into_iter()
                             .filter(|x| x.date >= start_date && x.date <= end_date)
+                            .rev()
                             .collect::<Vec<FundData>>()
                     }
                 }
