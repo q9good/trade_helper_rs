@@ -1,13 +1,13 @@
 use crate::account::fund_account::FundAccount;
 use crate::account::UpdateAccountItem;
 use crate::market::fund_market::get_fund_history;
-use chrono::{Datelike, Duration, Local, NaiveDate};
 use std::collections::HashMap;
+use time::{macros::*, Date, OffsetDateTime, Duration};
 
 ///  Automatic Investment Plan
 fn run_fund_aip_strategy(fund: u32) -> HashMap<u32, FundAccount> {
-    let start_date = NaiveDate::from_ymd(2007, 1, 1);
-    let today = NaiveDate::from_num_days_from_ce(Local::today().num_days_from_ce());
+    let start_date = date!(2007 - 1 - 1);
+    let today = OffsetDateTime::now_local().unwrap().date();
     let fund_history = get_fund_history(fund, start_date, today);
     let mut accounts = HashMap::new();
     accounts.insert(fund, FundAccount::default());
