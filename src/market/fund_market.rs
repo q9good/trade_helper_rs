@@ -1,10 +1,11 @@
 use anyhow::{anyhow, Result};
-use chrono::prelude::*;
+// use chrono::prelude::*;
 use reqwest::header::USER_AGENT;
 use reqwest::Url;
 use serde::{de, Deserialize, Deserializer};
 use std::collections::HashMap;
 use std::error::Error;
+use time::{format_description, macros::*, Date, OffsetDateTime, PrimitiveDateTime};
 
 use super::QuantitativeMarket;
 
@@ -21,7 +22,7 @@ pub enum FundStatus {
 pub struct FundData {
     #[serde(alias = "FSRQ")]
     #[serde(deserialize_with = "deserialize_with_date")]
-    pub(crate) date: NaiveDate, // 净值日期
+    pub(crate) date: Date, // 净值日期
     #[serde(alias = "DWJZ")]
     #[serde(deserialize_with = "deserialize_with_price")]
     pub(crate) unit_nav: u32, // 单位净值
@@ -56,7 +57,7 @@ pub struct FundData {
 
 impl FundData {
     pub(crate) fn new(
-        date: NaiveDate,
+        date: Date,
         unit_nav: u32,
         accumulate_nav: u32,
         dividend: Option<u32>,
@@ -79,12 +80,13 @@ impl FundData {
     }
 }
 
-fn deserialize_with_date<'de, D>(deserializer: D) -> Result<NaiveDate, D::Error>
+fn deserialize_with_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
     D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
-    NaiveDate::parse_from_str(&s, "%Y-%m-%d").map_err(de::Error::custom)
+    let format = format_description::parse("[year]-[month]-[day]").unwrap();
+    Date::parse(&s, &format).map_err(de::Error::custom)
 }
 
 fn deserialize_with_price<'de, D>(deserializer: D) -> Result<u32, D::Error>
@@ -116,8 +118,8 @@ where
 // 查询指定日期范围内的基金数据
 pub(crate) fn get_fund_history(
     code: u32,
-    start_date: NaiveDate,
-    end_date: NaiveDate,
+    start_date: Date,
+    end_date: Date,
 ) -> Result<Vec<FundData>> {
     let client = reqwest::blocking::Client::new();
     let params = [
@@ -159,11 +161,11 @@ pub(crate) fn get_fund_history(
 }
 
 impl QuantitativeMarket for FundData {
-    fn get_info_datetime(&self) -> NaiveDateTime {
-        self.date.and_hms(19, 0, 0)
+    fn get_info_datetime(&self) -> PrimitiveDateTime {
+        self.date.with_hms(19, 0, 0).unwrap()
     }
 
-    fn query_history_info(code: u32, start_date: NaiveDate, end_date: NaiveDate) -> Vec<FundData> {
+    fn query_history_info(code: u32, start_date: Date, end_date: Date) -> Vec<FundData> {
         let client = reqwest::blocking::Client::new();
         let params = [
             ("fundCode", format!("{:0>6}", code)),
@@ -206,11 +208,11 @@ mod tests {
     #[test]
     fn test_get_fund_history() {
         let code = 002021;
-        let start_date = NaiveDate::from_ymd(2021, 9, 1);
-        let end_date = NaiveDate::from_ymd(2021, 9, 1);
+        let start_date = date!(2021 - 9 - 1);
+        let end_date = date!(2021 - 9 - 1);
         let ret = get_fund_history(code, start_date, end_date);
         let expect = vec![FundData {
-            date: NaiveDate::from_ymd(2021, 9, 1),
+            date: date!(2021 - 9 - 1),
             unit_nav: 12880,
             accumulate_nav: 38280,
             SDATE: None,

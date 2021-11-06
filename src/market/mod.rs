@@ -1,16 +1,16 @@
 use anyhow::{anyhow, Result};
-use chrono::{NaiveDate, NaiveDateTime};
 use itertools::Itertools;
 use std::iter::Iterator;
+use time::{macros::*, Date, OffsetDateTime, PrimitiveDateTime};
 
 pub mod fund_market;
 
 /// 市场行情
 pub trait QuantitativeMarket {
     /// 行情的日期时间
-    fn get_info_datetime(&self) -> NaiveDateTime;
+    fn get_info_datetime(&self) -> PrimitiveDateTime;
 
-    fn query_history_info(code: u32, start_date: NaiveDate, end_date: NaiveDate) -> Vec<Self>
+    fn query_history_info(code: u32, start_date: Date, end_date: Date) -> Vec<Self>
     where
         Self: std::marker::Sized;
 }
@@ -20,11 +20,8 @@ type MarketCode = u32;
 pub trait QueryMarketInfo {
     type MarketInfo: QuantitativeMarket;
 
-    fn query_history_info(
-        &self,
-        start_date: NaiveDate,
-        end_date: NaiveDate,
-    ) -> Result<Vec<Self::MarketInfo>>;
+    fn query_history_info(&self, start_date: Date, end_date: Date)
+        -> Result<Vec<Self::MarketInfo>>;
 }
 
 #[derive(Debug)]
@@ -37,7 +34,7 @@ impl<T> InfoMixer<T>
 where
     T: QuantitativeMarket,
 {
-    fn new(codes: &[u32], start_date: NaiveDate, end_date: NaiveDate) -> Self {
+    fn new(codes: &[u32], start_date: Date, end_date: Date) -> Self {
         let infos = codes
             .iter()
             .map(|x| T::query_history_info(*x, start_date, end_date))
@@ -56,7 +53,7 @@ where
 {
     type Item = (u32, T);
     fn next(&mut self) -> Option<Self::Item> {
-        let future_time = NaiveDate::from_ymd(2099, 1, 1).and_hms(0, 0, 0);
+        let future_time = date!(2099 - 1 - 1).with_hms(0, 0, 0).unwrap();
         let first_ele_time: Vec<_> = self
             .info
             .iter()
@@ -88,8 +85,8 @@ mod tests {
 
     #[test]
     fn test_new_two_funds() {
-        let start_date = NaiveDate::from_ymd(2021, 9, 1);
-        let end_date = NaiveDate::from_ymd(2021, 9, 7);
+        let start_date = date!(2021 - 9 - 1);
+        let end_date = date!(2021 - 9 - 7);
         let codes = [002190_u32, 481010];
         let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
         assert_eq!(fund_mixer.code, codes);
@@ -100,8 +97,8 @@ mod tests {
 
     #[test]
     fn test_two_funds_iter() {
-        let start_date = NaiveDate::from_ymd(2021, 9, 1);
-        let end_date = NaiveDate::from_ymd(2021, 9, 7);
+        let start_date = date!(2021 - 9 - 1);
+        let end_date = date!(2021 - 9 - 7);
         let codes = [002190_u32, 481010];
         let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
         fund_mixer.for_each(|(code, info)| println!("{:?}: {}", info.date, code));
@@ -109,8 +106,8 @@ mod tests {
 
     #[test]
     fn test_unbalanced_two_funds_iter() {
-        let start_date = NaiveDate::from_ymd(2021, 10, 1);
-        let end_date = NaiveDate::from_ymd(2021, 10, 25);
+        let start_date = date!(2021 - 10 - 1);
+        let end_date = date!(2021 - 10 - 25);
         let codes = [013606_u32, 481010];
         let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
         fund_mixer.for_each(|(code, info)| println!("{:?}: {}", info.date, code));

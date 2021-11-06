@@ -1,5 +1,6 @@
 use super::{TradeDetail, TradeItem, UpdateAccountItem};
 use crate::market::fund_market::FundData;
+use time::{macros::*, Date};
 
 /// 基金账户信息，为避免浮点运算，部分值乘以一定倍数。
 /// 对外接口使用真实值
@@ -117,7 +118,6 @@ impl UpdateAccountItem for FundAccount {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::NaiveDate;
 
     #[test]
     fn test_update_account_without_dividend_rise() {
@@ -129,7 +129,7 @@ mod tests {
             total_value: 128800000,
         };
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
         account.update_account(&fund_data);
         assert_eq!(account.total_value, 200000000);
     }
@@ -144,7 +144,7 @@ mod tests {
             total_value: 128800000,
         };
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 10000, 30000, None);
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 10000, 30000, None);
         account.update_account(&fund_data);
         assert_eq!(account.total_value, 100000000);
     }
@@ -160,7 +160,7 @@ mod tests {
             total_value: 128800000,
         };
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, Some(100));
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, Some(100));
         account.update_account(&fund_data);
         assert_eq!(account.total_value, 201000000);
     }
@@ -181,7 +181,7 @@ mod tests {
             deal_volume: 100.0,
         });
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
         let detail = account.buy_with_volume(&fund_data, 100.0);
         assert_eq!(account.shares, 20000);
         assert_eq!(account.total_value, 400000000);
@@ -203,7 +203,7 @@ mod tests {
             deal_volume: 100.0,
         });
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
         let detail = account.buy_with_cost(&fund_data, 200.0);
         assert_eq!(account.shares, 20000);
         assert_eq!(account.total_value, 400000000);
@@ -225,7 +225,7 @@ mod tests {
             deal_volume: 50.0,
         });
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
         let detail = account.sell_with_volume(&fund_data, 50.0);
         assert_eq!(account.shares, 5000);
         assert_eq!(account.total_value, 100000000);
@@ -247,7 +247,7 @@ mod tests {
             deal_volume: 50.0,
         });
 
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
         let detail = account.sell_with_proportion(&fund_data, 0.5);
         // println!("{:?}", account);
         assert_eq!(account.shares, 5000);

@@ -2,8 +2,8 @@ pub mod fund_account;
 pub mod stock_account;
 use std::collections::HashMap;
 
-use chrono::NaiveDateTime;
 use serde::de;
+use time::{macros::*, Date, PrimitiveDateTime};
 
 use crate::market::QuantitativeMarket;
 
@@ -57,7 +57,7 @@ impl TradeDetail {
 #[derive(Debug, PartialEq, PartialOrd)]
 pub struct TradeHistory {
     // 成交时间
-    trade_time: NaiveDateTime,
+    trade_time: PrimitiveDateTime,
     // 成交标的代码
     trade_obj: u32,
     // 成交详情
@@ -194,7 +194,6 @@ where
 
 #[cfg(test)]
 mod test {
-    use chrono::NaiveDate;
 
     use crate::market::fund_market::FundData;
 
@@ -214,7 +213,7 @@ mod test {
     #[test]
     fn test_buy_new_fund_with_price() {
         let mut account = Account::<FundAccount>::new();
-        let fund_data = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
+        let fund_data = FundData::new(Date::from_ymd(2021, 9, 30), 20000, 30000, None);
         let expect_hold_detail = FundAccount {
             net_value: fund_data.unit_nav,
             accumulate_value: fund_data.accumulate_nav,
@@ -223,7 +222,7 @@ mod test {
             total_value: 100000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data.date.and_hms(19, 0, 0),
+            trade_time: fund_data.date.with_hms(19, 0, 0),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
                 deal_price: 2.0,
@@ -242,8 +241,8 @@ mod test {
     #[test]
     fn test_buy_same_fund_twice() {
         let mut account = Account::<FundAccount>::new();
-        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
-        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 30000, None);
+        let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(date!(2021 - 10 - 1), 20000, 30000, None);
         let expect_hold_detail = FundAccount {
             net_value: fund_data2.unit_nav,
             accumulate_value: fund_data2.accumulate_nav,
@@ -252,7 +251,7 @@ mod test {
             total_value: 200000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
                 deal_price: 2.0,
@@ -272,8 +271,8 @@ mod test {
     #[test]
     fn test_buy_two_different_funds() {
         let mut account = Account::<FundAccount>::new();
-        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
-        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 30000, None);
+        let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(date!(2021 - 10 - 1), 20000, 30000, None);
         let expect_hold_detail = FundAccount {
             net_value: fund_data2.unit_nav,
             accumulate_value: fund_data2.accumulate_nav,
@@ -282,7 +281,7 @@ mod test {
             total_value: 100000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0),
             trade_obj: 2,
             trade_detail: TradeDetail::Buy(TradeItem {
                 deal_price: 2.0,
@@ -302,8 +301,8 @@ mod test {
     #[test]
     fn test_get_ops_with_valid_account() {
         let mut account = Account::<FundAccount>::new();
-        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
-        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 30000, None);
+        let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(date!(2021 - 10 - 1), 20000, 30000, None);
 
         account.buy_with_cost(000001, fund_data1, 100.0);
         account.buy_with_cost(000002, fund_data2, 100.0);
@@ -319,8 +318,8 @@ mod test {
     #[test]
     fn test_sell_fund_didnot_possess() {
         let mut account = Account::<FundAccount>::new();
-        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
-        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 25000, 35000, None);
+        let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(date!(2021 - 10 - 1), 25000, 35000, None);
         let expect_hold_detail = FundAccount {
             net_value: fund_data1.unit_nav,
             accumulate_value: fund_data1.accumulate_nav,
@@ -329,7 +328,7 @@ mod test {
             total_value: 100000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data1.date.and_hms(19, 0, 0),
+            trade_time: fund_data1.date.with_hms(19, 0, 0),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
                 deal_price: 2.0,
@@ -347,8 +346,8 @@ mod test {
     #[test]
     fn test_sell_same_fund_50_shares() {
         let mut account = Account::<FundAccount>::new();
-        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
-        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 35000, None);
+        let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(date!(2021 - 10 - 1), 20000, 35000, None);
         let expect_hold_detail = FundAccount {
             net_value: fund_data2.unit_nav,
             accumulate_value: fund_data2.accumulate_nav,
@@ -357,7 +356,7 @@ mod test {
             total_value: 50000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
                 deal_price: 2.0,
@@ -376,8 +375,8 @@ mod test {
     #[test]
     fn test_sell_fund_half() {
         let mut account = Account::<FundAccount>::new();
-        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
-        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 35000, None);
+        let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(date!(2021 - 10 - 1), 20000, 35000, None);
         let expect_hold_detail = FundAccount {
             net_value: fund_data2.unit_nav,
             accumulate_value: fund_data2.accumulate_nav,
@@ -386,7 +385,7 @@ mod test {
             total_value: 50000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
                 deal_price: 2.0,
@@ -405,10 +404,10 @@ mod test {
     #[test]
     fn test_sell_fund_all() {
         let mut account = Account::<FundAccount>::new();
-        let fund_data1 = FundData::new(NaiveDate::from_ymd(2021, 9, 30), 20000, 30000, None);
-        let fund_data2 = FundData::new(NaiveDate::from_ymd(2021, 10, 1), 20000, 35000, None);
+        let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(date!(2021 - 10 - 1), 20000, 35000, None);
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.and_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
                 deal_price: 2.0,
