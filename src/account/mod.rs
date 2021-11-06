@@ -213,7 +213,9 @@ mod test {
     #[test]
     fn test_buy_new_fund_with_price() {
         let mut account = Account::<FundAccount>::new();
+
         let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+
         let expect_hold_detail = FundAccount {
             net_value: fund_data.unit_nav,
             accumulate_value: fund_data.accumulate_nav,
@@ -222,6 +224,7 @@ mod test {
             total_value: 100000000,
         };
         let expect_trade_history = TradeHistory {
+
             trade_time: fund_data.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
