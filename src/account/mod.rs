@@ -2,8 +2,8 @@ pub mod fund_account;
 pub mod stock_account;
 use std::collections::HashMap;
 
-use serde::de;
-use time::{macros::*, Date, PrimitiveDateTime};
+// use serde::de;
+use time::PrimitiveDateTime;
 
 use crate::market::QuantitativeMarket;
 
@@ -224,7 +224,6 @@ mod test {
             total_value: 100000000,
         };
         let expect_trade_history = TradeHistory {
-
             trade_time: fund_data.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {

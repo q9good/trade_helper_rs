@@ -2,7 +2,7 @@ use crate::account::fund_account::FundAccount;
 use crate::account::UpdateAccountItem;
 use crate::market::fund_market::get_fund_history;
 use std::collections::HashMap;
-use time::{macros::*, Date, OffsetDateTime, Duration};
+use time::{macros::*, Duration, OffsetDateTime};
 
 ///  Automatic Investment Plan
 fn run_fund_aip_strategy(fund: u32) -> HashMap<u32, FundAccount> {
@@ -11,7 +11,7 @@ fn run_fund_aip_strategy(fund: u32) -> HashMap<u32, FundAccount> {
     let fund_history = get_fund_history(fund, start_date, today);
     let mut accounts = HashMap::new();
     accounts.insert(fund, FundAccount::default());
-    let mut fund_account = accounts.get_mut(&fund).unwrap();
+    let fund_account = accounts.get_mut(&fund).unwrap();
     let mut trade_date;
     if let Ok(events) = fund_history {
         let mut event_iter = events.iter();
