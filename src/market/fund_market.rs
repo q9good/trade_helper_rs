@@ -1,11 +1,10 @@
 use anyhow::{anyhow, Result};
 // use chrono::prelude::*;
-use reqwest::header::USER_AGENT;
+// use reqwest::header::USER_AGENT;
 use reqwest::Url;
 use serde::{de, Deserialize, Deserializer};
-use std::collections::HashMap;
-use std::error::Error;
-use time::{format_description, macros::*, Date, OffsetDateTime, PrimitiveDateTime};
+// use std::collections::HashMap;
+use time::{format_description, Date, PrimitiveDateTime};
 
 use super::QuantitativeMarket;
 
