@@ -213,7 +213,9 @@ mod test {
     #[test]
     fn test_buy_new_fund_with_price() {
         let mut account = Account::<FundAccount>::new();
-        let fund_data = FundData::new(Date::from_ymd(2021, 9, 30), 20000, 30000, None);
+
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+
         let expect_hold_detail = FundAccount {
             net_value: fund_data.unit_nav,
             accumulate_value: fund_data.accumulate_nav,
@@ -222,7 +224,8 @@ mod test {
             total_value: 100000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data.date.with_hms(19, 0, 0),
+
+            trade_time: fund_data.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
                 deal_price: 2.0,
@@ -251,7 +254,7 @@ mod test {
             total_value: 200000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.with_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
                 deal_price: 2.0,
@@ -281,7 +284,7 @@ mod test {
             total_value: 100000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.with_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 2,
             trade_detail: TradeDetail::Buy(TradeItem {
                 deal_price: 2.0,
@@ -328,7 +331,7 @@ mod test {
             total_value: 100000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data1.date.with_hms(19, 0, 0),
+            trade_time: fund_data1.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
                 deal_price: 2.0,
@@ -356,7 +359,7 @@ mod test {
             total_value: 50000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.with_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
                 deal_price: 2.0,
@@ -385,7 +388,7 @@ mod test {
             total_value: 50000000,
         };
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.with_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
                 deal_price: 2.0,
@@ -407,7 +410,7 @@ mod test {
         let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
         let fund_data2 = FundData::new(date!(2021 - 10 - 1), 20000, 35000, None);
         let expect_trade_history = TradeHistory {
-            trade_time: fund_data2.date.with_hms(19, 0, 0),
+            trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
                 deal_price: 2.0,
