@@ -5,8 +5,8 @@ mod account;
 mod event;
 mod market;
 mod strategy;
-use time::{macros::*, OffsetDateTime};
 use clap::Parser;
+use time::{format_description, macros::*, Date, OffsetDateTime};
 #[allow(clippy::zero_prefixed_literal)]
 // use chrono::{Datelike, Local, };
 // use crossbeam_channel::{bounded, unbounded};
@@ -29,15 +29,45 @@ struct Opt {
     day: u8,
 
     /// the list of fund code
-    #[clap(name = "LIST OF FUND", short = 'f', long, required = true, min_values = 1)]
-    fund:Vec<u32>,
+    #[clap(
+        name = "LIST OF FUND",
+        short = 'f',
+        long,
+        required = true,
+        min_values = 1
+    )]
+    fund: Vec<u32>,
 
     /// the buying amount of each fund
-    #[clap(name = "BUDGET OF FUND", short = 'b', long, required = true, min_values = 1)]
-    budget:Vec<f32>
+    #[clap(
+        name = "BUDGET OF FUND",
+        short = 'b',
+        long,
+        required = true,
+        min_values = 1
+    )]
+    budget: Vec<f32>,
 }
 
 fn main() {
     let opt = Opt::parse();
-    println!("{:?}",opt);
+    let format = format_description::parse("[year][month][day]").unwrap();
+    let start_date = Date::parse(&opt.start.to_string(), &format).unwrap();
+    let end_date = Date::parse(&opt.end.to_string(), &format).unwrap();
+
+    // params check
+    if start_date > end_date {
+        panic!(
+            "the end date {} should later than start date {}",
+            opt.end, opt.start
+        );
+    }
+
+    if opt.fund.len() != opt.budget.len() {
+        panic!(
+            "the length of fund: {:?} and budget: {:?} must match",
+            opt.fund, opt.budget
+        );
+    }
+    println!("{:?}", start_date);
 }
