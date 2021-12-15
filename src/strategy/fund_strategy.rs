@@ -1,33 +1,31 @@
 use crate::account::fund_account::FundAccount;
-use crate::account::UpdateAccountItem;
-use crate::market::fund_market::get_fund_history;
+use crate::account::{Account, UpdateAccountItem};
+use crate::market::fund_market::{get_fund_history, FundData};
+use crate::market::InfoMixer;
 use std::collections::HashMap;
-use time::{macros::*, Duration, OffsetDateTime};
+use time::{macros::*, Date, Duration, OffsetDateTime};
 
 ///  Automatic Investment Plan
-fn run_fund_aip_strategy(fund: u32) -> HashMap<u32, FundAccount> {
-    let start_date = date!(2007 - 1 - 1);
-    let today = OffsetDateTime::now_local().unwrap().date();
-    let fund_history = get_fund_history(fund, start_date, today);
-    let mut accounts = HashMap::new();
-    accounts.insert(fund, FundAccount::default());
-    let fund_account = accounts.get_mut(&fund).unwrap();
-    let mut trade_date;
-    if let Ok(events) = fund_history {
-        let mut event_iter = events.iter();
-        let event = event_iter.next().unwrap();
-        fund_account.buy_with_cost(event, 1000.0);
-        trade_date = event.date;
-        for event in event_iter {
-            if event.date - trade_date > Duration::days(30) {
-                fund_account.buy_with_cost(event, 1000.0);
-                trade_date = event.date;
-            } else {
-                fund_account.update_account(event);
-            }
-        }
-    }
-    accounts
+pub fn run_fund_aip_strategy(
+    start: Date,
+    end: Date,
+    day: u8,
+    fund: &[u32],
+    budget: &[f32],
+) -> Account<FundAccount>{
+    let mut fund_mixer = InfoMixer::<FundData>::new(fund, start, end);
+    let mut fund_accounts = Account::<FundAccount>::new();
+
+
+    fund_accounts
+}
+
+fn process_one_specific_fund(
+    info: &FundData,
+    history: &mut Option<Date>,
+    account: &mut Account<FundAccount>,
+) {
+    unimplemented!();
 }
 
 #[cfg(test)]

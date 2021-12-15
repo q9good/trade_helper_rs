@@ -6,6 +6,7 @@ mod event;
 mod market;
 mod strategy;
 use clap::Parser;
+use strategy::fund_strategy::*;
 use time::{format_description, macros::*, Date, OffsetDateTime};
 #[allow(clippy::zero_prefixed_literal)]
 // use chrono::{Datelike, Local, };
@@ -69,5 +70,6 @@ fn main() {
             opt.fund, opt.budget
         );
     }
-    println!("{:?}", start_date);
+
+    run_fund_aip_strategy(start_date, end_date, opt.day, &opt.fund, &opt.budget);
 }
