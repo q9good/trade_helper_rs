@@ -33,7 +33,7 @@ impl<T> InfoMixer<T>
 where
     T: QuantitativeMarket,
 {
-    fn new(codes: &[u32], start_date: Date, end_date: Date) -> Self {
+    pub(crate) fn new(codes: &[u32], start_date: Date, end_date: Date) -> Self {
         let infos = codes
             .iter()
             .map(|x| T::query_history_info(*x, start_date, end_date))
@@ -110,5 +110,15 @@ mod tests {
         let codes = [013606_u32, 481010];
         let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
         fund_mixer.for_each(|(code, info)| println!("{:?}: {}", info.date, code));
+    }
+
+    #[test]
+    fn test_call_iter(){
+        let start_date = date!(2021 - 10 - 1);
+        let end_date = date!(2021 - 10 - 25);
+        let codes = [013606_u32, 481010];
+        let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
+        // let fund_iter = fund_mixer.iter();
+
     }
 }
