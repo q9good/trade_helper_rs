@@ -113,12 +113,11 @@ mod tests {
     }
 
     #[test]
-    fn test_call_iter(){
+    fn test_call_iter() {
         let start_date = date!(2021 - 10 - 1);
         let end_date = date!(2021 - 10 - 25);
         let codes = [013606_u32, 481010];
         let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
         // let fund_iter = fund_mixer.iter();
-
     }
 }
