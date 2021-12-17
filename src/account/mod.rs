@@ -88,7 +88,7 @@ where
     pub(crate) fn new() -> Self {
         Account {
             hold_detail: HashMap::<u32, T>::new(),
-            trade_history: HashMap::<u32, Vec::<TradeHistory>>::new(),
+            trade_history: HashMap::<u32, Vec<TradeHistory>>::new(),
             account_value: 0.0,
             balance_price: 0.0,
         }
@@ -121,7 +121,10 @@ where
         // 更新账户资产
         self.account_value = self.account_value - prev_asset + cur_asset;
         // 记录交易信息
-        let history = self.trade_history.entry(code).or_insert(Vec::<TradeHistory>::new());
+        let history = self
+            .trade_history
+            .entry(code)
+            .or_insert(Vec::<TradeHistory>::new());
         history.push(TradeHistory {
             trade_time: info.get_info_datetime(),
             trade_obj: code,
@@ -130,7 +133,7 @@ where
     }
 
     // 以指定总价买入
-    fn buy_with_cost(&mut self, code: u32, info: T::MarketData, price: f32) {
+    pub(crate) fn buy_with_cost(&mut self, code: u32, info: T::MarketData, price: f32) {
         let item = self.hold_detail.entry(code).or_insert_with(T::default);
         let prev_asset = item.get_current_asset();
         let detail = item.buy_with_cost(&info, price);
@@ -140,7 +143,10 @@ where
         // 更新账户资产
         self.account_value = self.account_value - prev_asset + cur_asset;
         // 记录交易信息
-        let history = self.trade_history.entry(code).or_insert(Vec::<TradeHistory>::new());
+        let history = self
+            .trade_history
+            .entry(code)
+            .or_insert(Vec::<TradeHistory>::new());
         history.push(TradeHistory {
             trade_time: info.get_info_datetime(),
             trade_obj: code,
@@ -159,7 +165,10 @@ where
             // 更新账户资产
             self.account_value = self.account_value - prev_asset + cur_asset;
             // 记录交易信息
-            let history = self.trade_history.entry(code).or_insert(Vec::<TradeHistory>::new());
+            let history = self
+                .trade_history
+                .entry(code)
+                .or_insert(Vec::<TradeHistory>::new());
             history.push(TradeHistory {
                 trade_time: info.get_info_datetime(),
                 trade_obj: code,
@@ -183,7 +192,10 @@ where
             // 更新账户资产
             self.account_value = self.account_value - prev_asset + cur_asset;
             // 记录交易信息
-            let history = self.trade_history.entry(code).or_insert(Vec::<TradeHistory>::new());
+            let history = self
+                .trade_history
+                .entry(code)
+                .or_insert(Vec::<TradeHistory>::new());
             history.push(TradeHistory {
                 trade_time: info.get_info_datetime(),
                 trade_obj: code,
@@ -242,7 +254,10 @@ mod test {
         assert!(account.hold_detail.get(&000001).is_some());
         assert!(account.hold_detail.get(&000002).is_none());
         assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
-        assert_eq!(Some(expect_trade_history), account.trade_history.get_mut(&1).unwrap().pop());
+        assert_eq!(
+            Some(expect_trade_history),
+            account.trade_history.get_mut(&1).unwrap().pop()
+        );
     }
 
     #[test]
@@ -272,7 +287,10 @@ mod test {
         assert!(account.hold_detail.get(&000001).is_some());
         assert!(account.hold_detail.get(&000002).is_none());
         assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
-        assert_eq!(expect_trade_history, account.trade_history.get_mut(&1).unwrap().pop().unwrap());
+        assert_eq!(
+            expect_trade_history,
+            account.trade_history.get_mut(&1).unwrap().pop().unwrap()
+        );
     }
 
     #[test]
@@ -302,7 +320,10 @@ mod test {
         assert!(account.hold_detail.get(&000001).is_some());
         assert!(account.hold_detail.get(&000002).is_some());
         assert_eq!(expect_hold_detail, account.hold_detail[&000002]);
-        assert_eq!(expect_trade_history, account.trade_history.get_mut(&2).unwrap().pop().unwrap());
+        assert_eq!(
+            expect_trade_history,
+            account.trade_history.get_mut(&2).unwrap().pop().unwrap()
+        );
     }
 
     #[test]
@@ -347,7 +368,10 @@ mod test {
 
         account.sell_with_volume(000002, fund_data2, 50.0);
         assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
-        assert_eq!(expect_trade_history, account.trade_history.get_mut(&1).unwrap().pop().unwrap());
+        assert_eq!(
+            expect_trade_history,
+            account.trade_history.get_mut(&1).unwrap().pop().unwrap()
+        );
     }
 
     #[test]
@@ -375,7 +399,10 @@ mod test {
 
         account.sell_with_volume(000001, fund_data2, 25.0);
         assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
-        assert_eq!(&expect_trade_history, account.trade_history.get_mut(&1).unwrap().last().unwrap());
+        assert_eq!(
+            &expect_trade_history,
+            account.trade_history.get_mut(&1).unwrap().last().unwrap()
+        );
         assert_eq!(-50.0, account.balance_price);
     }
 
@@ -404,7 +431,10 @@ mod test {
 
         account.sell_with_proportion(000001, fund_data2, 0.5);
         assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
-        assert_eq!(&expect_trade_history, account.trade_history.get_mut(&1).unwrap().last().unwrap());
+        assert_eq!(
+            &expect_trade_history,
+            account.trade_history.get_mut(&1).unwrap().last().unwrap()
+        );
         assert_eq!(-50.0, account.balance_price);
     }
 
@@ -426,7 +456,10 @@ mod test {
 
         account.sell_with_proportion(000001, fund_data2, 1.0);
         assert_eq!(None, account.hold_detail.get(&000001));
-        assert_eq!(&expect_trade_history, account.trade_history.get_mut(&1).unwrap().last().unwrap());
+        assert_eq!(
+            &expect_trade_history,
+            account.trade_history.get_mut(&1).unwrap().last().unwrap()
+        );
         assert_eq!(0.0, account.balance_price);
     }
 
