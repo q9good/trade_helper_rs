@@ -75,9 +75,9 @@ pub struct Account<T: UpdateAccountItem> {
     // 交易记录
     trade_history: HashMap<u32, Vec<TradeHistory>>,
     // 账面价值
-    account_value: f32,
+    pub(crate) account_value: f32,
     // 账户余额,Todo：对于回测，暂时先假设资金无限
-    balance_price: f32,
+    pub(crate) balance_price: f32,
 }
 
 impl<T> Account<T>
