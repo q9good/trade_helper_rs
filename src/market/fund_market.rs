@@ -235,4 +235,28 @@ mod tests {
         let res = serde_json::from_str::<FundData>(input);
         println!("{:#?}", res);
     }
+
+    #[test]
+    fn test_long_time_query() {
+        let code = 002021;
+        let start_date = date!(2007 - 9 - 1);
+        let end_date = date!(2021 - 9 - 1);
+        let ret = get_fund_history(code, start_date, end_date);
+        let expect = vec![FundData {
+            date: date!(2021 - 9 - 1),
+            unit_nav: 12880,
+            accumulate_nav: 38280,
+            SDATE: None,
+            ACTUALSYI: (),
+            NAVTYPE: (),
+            JZZZL: (),
+            buy_status: (),
+            sell_status: (),
+            dividend: None,
+            FHFCBZ: (),
+            DTYPE: (),
+            FHSP: (),
+        }];
+        assert_eq!(expect, ret.unwrap())
+    }
 }
