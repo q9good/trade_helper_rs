@@ -14,7 +14,9 @@ pub struct FundAccount {
     pub(crate) shares: u32,     //持有份额
     pub(crate) cash_bonus: u64, //现金分红，默认为红利再投
     // 账面价值是真实值乘以1000000
-    pub(crate) total_value: u64, //基金总价值
+    pub(crate) total_value: u64,          //基金总价值
+    pub(crate) avg_price: Option<u32>,    //平均持仓价格
+    pub(crate) lowest_price: Option<u32>, //最低持仓价格
 }
 
 impl FundAccount {
@@ -53,6 +55,12 @@ impl UpdateAccountItem for FundAccount {
         self.shares as f32 * 0.01
     }
 
+    fn get_average_price(&self) -> Option<f32> {
+        self.avg_price.map(|x| x as f32 * 0.0001)
+    }
+    fn get_lowest_price(&self) -> Option<f32> {
+        self.lowest_price.map(|x| x as f32 * 0.0001)
+    }
     fn get_current_asset(&self) -> f32 {
         (self.total_value as f64 * 0.000001) as f32
     }
@@ -63,6 +71,10 @@ impl UpdateAccountItem for FundAccount {
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
         self.total_value = (self.net_value * self.shares) as u64;
+        self.avg_price = Some((self.total_value / self.shares as u64) as u32);
+        if self.lowest_price.is_none() || self.lowest_price.unwrap() > self.net_value {
+            self.lowest_price = Some(self.net_value)
+        }
         TradeDetail::Buy(TradeItem {
             deal_price: self.net_value as f32 * 0.0001,
             deal_volume: volume,
@@ -84,6 +96,10 @@ impl UpdateAccountItem for FundAccount {
         self.accumulate_value = data.accumulate_nav;
 
         self.total_value = self.net_value as u64 * self.shares as u64;
+        self.avg_price = Some((self.total_value / self.shares as u64) as u32);
+        if self.lowest_price.is_none() || self.lowest_price.unwrap() > self.net_value {
+            self.lowest_price = Some(self.net_value)
+        }
 
         TradeDetail::Buy(TradeItem {
             deal_price: self.net_value as f32 * 0.0001,
@@ -146,6 +162,8 @@ mod tests {
             shares: 10000,
             cash_bonus: 0,
             total_value: 128800000,
+            avg_price: None,
+            lowest_price: None,
         };
 
         let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
@@ -161,6 +179,8 @@ mod tests {
             shares: 10000,
             cash_bonus: 0,
             total_value: 128800000,
+            avg_price: None,
+            lowest_price: None,
         };
 
         let fund_data = FundData::new(date!(2021 - 9 - 30), 10000, 30000, None);
@@ -177,6 +197,8 @@ mod tests {
             shares: 10000,
             cash_bonus: 0,
             total_value: 128800000,
+            avg_price: None,
+            lowest_price: None,
         };
 
         let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, Some(100));
@@ -193,6 +215,8 @@ mod tests {
             shares: 10000,
             cash_bonus: 0,
             total_value: 128800000,
+            avg_price: None,
+            lowest_price: None,
         };
 
         let expect = TradeDetail::Buy(TradeItem {
@@ -216,6 +240,8 @@ mod tests {
             shares: 10000,
             cash_bonus: 0,
             total_value: 128800000,
+            avg_price: None,
+            lowest_price: None,
         };
         let expect = TradeDetail::Buy(TradeItem {
             deal_price: 2.0,
@@ -238,6 +264,8 @@ mod tests {
             shares: 10000,
             cash_bonus: 0,
             total_value: 128800000,
+            avg_price: None,
+            lowest_price: None,
         };
         let expect = TradeDetail::Sell(TradeItem {
             deal_price: 2.0,
@@ -260,6 +288,8 @@ mod tests {
             shares: 10000,
             cash_bonus: 0,
             total_value: 128800000,
+            avg_price: None,
+            lowest_price: None,
         };
         let expect = TradeDetail::Sell(TradeItem {
             deal_price: 2.0,
@@ -272,5 +302,33 @@ mod tests {
         assert_eq!(account.shares, 5000);
         assert_eq!(account.total_value, 100000000);
         assert_eq!(detail, expect);
+    }
+
+    #[test]
+    fn test_calc_hold_price() {
+        let mut account = FundAccount {
+            // fund_code: 002021,
+            net_value: 12880,
+            accumulate_value: 22880,
+            shares: 10000,
+            cash_bonus: 0,
+            total_value: 128800000,
+            avg_price: None,
+            lowest_price: None,
+        };
+        let expect = TradeDetail::Buy(TradeItem {
+            deal_price: 2.0,
+            deal_volume: 100.0,
+        });
+
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+        let detail = account.buy_with_cost(&fund_data, 200.0);
+        assert_eq!(account.shares, 20000);
+        assert_eq!(account.total_value, 400000000);
+        assert_eq!(detail, expect);
+        let fund_data = FundData::new(date!(2021 - 9 - 30), 10000, 50000, None);
+        account.buy_with_cost(&fund_data, 200.0);
+        assert_eq!(account.lowest_price, Some(10000));
+        assert_eq!(account.avg_price, Some(10000));
     }
 }
