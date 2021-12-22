@@ -71,7 +71,7 @@ pub struct TradeHistory {
 #[derive(Debug, Default)]
 pub struct Account<T: UpdateAccountItem> {
     // 持仓详情
-    hold_detail: HashMap<u32, T>,
+    pub(crate) hold_detail: HashMap<u32, T>,
     // 交易记录
     trade_history: HashMap<u32, Vec<TradeHistory>>,
     // 账面价值
@@ -110,16 +110,18 @@ where
         self.hold_detail.get(&code).map(|x| x.get_current_asset())
         // .map_or(None, |k| Some(k.get_current_asset()))
     }
+    /// 更新资产价格
+    pub(crate) fn update_account(&mut self, code: u32, info: T::MarketData) {
+        let fund = self.hold_detail.entry(code).or_insert_with(T::default);
+        fund.update_account(&info);
+    }
     // 以指定数量标的买入
-    fn buy_with_volume(&mut self, code: u32, info: T::MarketData, volume: f32) {
+    fn buy_with_volume(&mut self, code: u32, info: &T::MarketData, volume: f32) {
         let item = self.hold_detail.entry(code).or_insert_with(T::default);
-        let prev_asset = item.get_current_asset();
         let detail = item.buy_with_volume(&info, volume);
-        let cur_asset = item.get_current_asset();
         // 更新账户余额
         self.balance_price += detail.calc_cost_or_earning();
         // 更新账户资产
-        self.account_value = self.account_value - prev_asset + cur_asset;
         // 记录交易信息
         let history = self
             .trade_history
@@ -133,15 +135,11 @@ where
     }
 
     // 以指定总价买入
-    pub(crate) fn buy_with_cost(&mut self, code: u32, info: T::MarketData, price: f32) {
+    pub(crate) fn buy_with_cost(&mut self, code: u32, info: &T::MarketData, price: f32) {
         let item = self.hold_detail.entry(code).or_insert_with(T::default);
-        let prev_asset = item.get_current_asset();
-        let detail = item.buy_with_cost(&info, price);
-        let cur_asset = item.get_current_asset();
+        let detail = item.buy_with_cost(info, price);
         // 更新账户余额
         self.balance_price += detail.calc_cost_or_earning();
-        // 更新账户资产
-        self.account_value = self.account_value - prev_asset + cur_asset;
         // 记录交易信息
         let history = self
             .trade_history
@@ -155,15 +153,11 @@ where
     }
 
     // 以当前价格卖出指定数量
-    fn sell_with_volume(&mut self, code: u32, info: T::MarketData, volume: f32) {
+    fn sell_with_volume(&mut self, code: u32, info: &T::MarketData, volume: f32) {
         if let Some(item) = self.hold_detail.get_mut(&code) {
-            let prev_asset = item.get_current_asset();
             let detail = item.sell_with_volume(&info, volume);
-            let cur_asset = item.get_current_asset();
             // 更新账户余额
             self.balance_price += detail.calc_cost_or_earning();
-            // 更新账户资产
-            self.account_value = self.account_value - prev_asset + cur_asset;
             // 记录交易信息
             let history = self
                 .trade_history
@@ -182,15 +176,11 @@ where
     }
 
     // 以持仓比例卖出
-    fn sell_with_proportion(&mut self, code: u32, info: T::MarketData, proportion: f32) {
+    fn sell_with_proportion(&mut self, code: u32, info: &T::MarketData, proportion: f32) {
         if let Some(item) = self.hold_detail.get_mut(&code) {
-            let prev_asset = item.get_current_asset();
             let detail = item.sell_with_proportion(&info, proportion);
-            let cur_asset = item.get_current_asset();
             // 更新账户余额
             self.balance_price += detail.calc_cost_or_earning();
-            // 更新账户资产
-            self.account_value = self.account_value - prev_asset + cur_asset;
             // 记录交易信息
             let history = self
                 .trade_history
@@ -249,7 +239,7 @@ mod test {
             }),
         };
 
-        account.buy_with_cost(000001, fund_data, 100.0);
+        account.buy_with_cost(000001, &fund_data, 100.0);
 
         assert!(account.hold_detail.get(&000001).is_some());
         assert!(account.hold_detail.get(&000002).is_none());
@@ -281,8 +271,8 @@ mod test {
             }),
         };
 
-        account.buy_with_cost(000001, fund_data1, 100.0);
-        account.buy_with_cost(000001, fund_data2, 100.0);
+        account.buy_with_cost(000001, &fund_data1, 100.0);
+        account.buy_with_cost(000001, &fund_data2, 100.0);
 
         assert!(account.hold_detail.get(&000001).is_some());
         assert!(account.hold_detail.get(&000002).is_none());
@@ -314,8 +304,8 @@ mod test {
             }),
         };
 
-        account.buy_with_cost(000001, fund_data1, 100.0);
-        account.buy_with_cost(000002, fund_data2, 100.0);
+        account.buy_with_cost(000001, &fund_data1, 100.0);
+        account.buy_with_cost(000002, &fund_data2, 100.0);
 
         assert!(account.hold_detail.get(&000001).is_some());
         assert!(account.hold_detail.get(&000002).is_some());
@@ -332,8 +322,8 @@ mod test {
         let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
         let fund_data2 = FundData::new(date!(2021 - 10 - 1), 20000, 30000, None);
 
-        account.buy_with_cost(000001, fund_data1, 100.0);
-        account.buy_with_cost(000002, fund_data2, 100.0);
+        account.buy_with_cost(000001, &fund_data1, 100.0);
+        account.buy_with_cost(000002, &fund_data2, 100.0);
 
         assert_eq!(Some(50.0), account.get_object_volume(000001));
         assert_eq!(Some(2.0), account.get_object_price(000001));
@@ -364,9 +354,9 @@ mod test {
             }),
         };
 
-        account.buy_with_cost(000001, fund_data1, 100.0);
+        account.buy_with_cost(000001, &fund_data1, 100.0);
 
-        account.sell_with_volume(000002, fund_data2, 50.0);
+        account.sell_with_volume(000002, &fund_data2, 50.0);
         assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
         assert_eq!(
             expect_trade_history,
@@ -395,9 +385,9 @@ mod test {
             }),
         };
 
-        account.buy_with_cost(000001, fund_data1, 100.0);
+        account.buy_with_cost(000001, &fund_data1, 100.0);
 
-        account.sell_with_volume(000001, fund_data2, 25.0);
+        account.sell_with_volume(000001, &fund_data2, 25.0);
         assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
         assert_eq!(
             &expect_trade_history,
@@ -427,9 +417,9 @@ mod test {
             }),
         };
 
-        account.buy_with_cost(000001, fund_data1, 100.0);
+        account.buy_with_cost(000001, &fund_data1, 100.0);
 
-        account.sell_with_proportion(000001, fund_data2, 0.5);
+        account.sell_with_proportion(000001, &fund_data2, 0.5);
         assert_eq!(expect_hold_detail, account.hold_detail[&000001]);
         assert_eq!(
             &expect_trade_history,
@@ -452,9 +442,9 @@ mod test {
             }),
         };
 
-        account.buy_with_cost(000001, fund_data1, 100.0);
+        account.buy_with_cost(000001, &fund_data1, 100.0);
 
-        account.sell_with_proportion(000001, fund_data2, 1.0);
+        account.sell_with_proportion(000001, &fund_data2, 1.0);
         assert_eq!(None, account.hold_detail.get(&000001));
         assert_eq!(
             &expect_trade_history,

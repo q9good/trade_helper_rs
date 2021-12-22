@@ -12,7 +12,7 @@ pub struct FundAccount {
     pub(crate) accumulate_value: u32, //累计净值
     // 持有份额是其真实值乘以100,避免浮点数运算
     pub(crate) shares: u32,     //持有份额
-    pub(crate) cash_bonus: u32, //现金分红，默认为红利再投
+    pub(crate) cash_bonus: u64, //现金分红，默认为红利再投
     // 账面价值是真实值乘以1000000
     pub(crate) total_value: u64, //基金总价值
 }
@@ -21,8 +21,16 @@ impl FundAccount {
     fn check_dividend(&mut self, data: &FundData) {
         if data.dividend.is_some() {
             // 红利再投
-            self.cash_bonus += data.dividend.unwrap() * self.shares;
-            self.shares += data.dividend.unwrap() * self.shares / data.unit_nav;
+            self.cash_bonus += data.dividend.unwrap() as u64 * self.shares as u64;
+            self.shares += (data.dividend.unwrap() as u64 * self.shares as u64/ data.unit_nav as u64)as u32;
+            #[cfg(test)]
+            println!(
+                "{}{}{} increase {}",
+                data.date.year(),
+                data.date.month(),
+                data.date.day(),
+                (data.dividend.unwrap() as u64 * self.shares as u64/ data.unit_nav as u64)as u32
+            )
         }
     }
 }
@@ -34,7 +42,7 @@ impl UpdateAccountItem for FundAccount {
         self.check_dividend(data);
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
-        self.total_value = (self.net_value * self.shares) as u64;
+        self.total_value = self.net_value as u64 * self.shares as u64;
     }
 
     fn get_current_value(&self) -> f32 {
@@ -62,10 +70,18 @@ impl UpdateAccountItem for FundAccount {
     fn buy_with_cost(&mut self, data: &Self::MarketData, price: f32) -> TradeDetail {
         self.check_dividend(data);
         let increment = ((price / ((data.unit_nav as f32) * 0.0001)) * 100.0) as u32;
+        #[cfg(test)]
+        println!(
+            "{}{}{} buy {}",
+            data.date.year(),
+            data.date.month(),
+            data.date.day(),
+            increment
+        );
         self.shares += increment;
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
-        self.total_value = (self.net_value as u64 * self.shares as u64);
+        self.total_value = self.net_value as u64 * self.shares as u64;
         TradeDetail::Buy(TradeItem {
             deal_price: self.net_value as f32 * 0.0001,
             deal_volume: increment as f32 * 0.01,
