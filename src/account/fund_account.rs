@@ -81,7 +81,9 @@ impl UpdateAccountItem for FundAccount {
         self.shares += increment;
         self.net_value = data.unit_nav;
         self.accumulate_value = data.accumulate_nav;
+
         self.total_value = self.net_value as u64 * self.shares as u64;
+
         TradeDetail::Buy(TradeItem {
             deal_price: self.net_value as f32 * 0.0001,
             deal_volume: increment as f32 * 0.01,

@@ -242,6 +242,8 @@ mod tests {
         let start_date = date!(2007 - 9 - 1);
         let end_date = date!(2021 - 9 - 1);
         let ret = get_fund_history(code, start_date, end_date);
+
         assert!(ret.is_ok());
+
     }
 }
