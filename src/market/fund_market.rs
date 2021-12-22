@@ -244,6 +244,5 @@ mod tests {
         let ret = get_fund_history(code, start_date, end_date);
 
         assert!(ret.is_ok());
-
     }
 }

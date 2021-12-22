@@ -22,14 +22,15 @@ impl FundAccount {
         if data.dividend.is_some() {
             // 红利再投
             self.cash_bonus += data.dividend.unwrap() as u64 * self.shares as u64;
-            self.shares += (data.dividend.unwrap() as u64 * self.shares as u64/ data.unit_nav as u64)as u32;
+            self.shares +=
+                (data.dividend.unwrap() as u64 * self.shares as u64 / data.unit_nav as u64) as u32;
             #[cfg(test)]
             println!(
                 "{}{}{} increase {}",
                 data.date.year(),
                 data.date.month(),
                 data.date.day(),
-                (data.dividend.unwrap() as u64 * self.shares as u64/ data.unit_nav as u64)as u32
+                (data.dividend.unwrap() as u64 * self.shares as u64 / data.unit_nav as u64) as u32
             )
         }
     }
