@@ -43,6 +43,59 @@ pub fn run_fund_aip_strategy(
     fund_accounts
 }
 
+/// buy more at lower price
+pub fn run_fund_buy_more_strategy(
+    start: Date,
+    end: Date,
+    day: u8,
+    fund: &[u32],
+    budget: &[f32],
+) -> Account<FundAccount> {
+    let mut fund_mixer = InfoMixer::<FundData>::new(fund, start, end);
+    let mut fund_accounts = Account::<FundAccount>::new();
+    // let mut prev_fund_month = HashMap::<u32, Month>::new();
+    let fund_budget: HashMap<_, _> = fund.iter().zip(budget.iter()).collect();
+
+    let mut prev_fund_month: HashMap<u32, Month> = fund
+        .iter()
+        .map(|x| (*x, start.month().previous()))
+        .collect();
+    // Keep the same with real world, won't use statistical way
+    fund_mixer.for_each(|(code, fund_data)| {
+        if fund_data.date.day() >= day
+            && fund_data.date.month() != *prev_fund_month.get(&code).unwrap()
+        {
+            let mut budget = *fund_budget[&code];
+            if fund_accounts.get_object_lowest_price(code).is_some()
+                && fund_accounts.get_object_lowest_price(code).unwrap()
+                    > fund_data.unit_nav as f32 * 0.0001
+            {
+                budget *= 2.0;
+            } else if fund_accounts.get_object_average_price(code).is_some()
+                && fund_accounts.get_object_average_price(code).unwrap()
+                    > fund_data.unit_nav as f32 * 0.0001
+            {
+                let avg = fund_accounts.get_object_average_price(code).unwrap();
+                budget *= avg / (fund_data.unit_nav as f32 * 0.0001);
+            }
+            #[cfg(test)]
+            println!("{}", budget);
+            fund_accounts.buy_with_cost(code, &fund_data, budget);
+            let entry = prev_fund_month.get_mut(&code).unwrap();
+            *entry = fund_data.date.month();
+        } else {
+            fund_accounts.update_account(code, fund_data);
+        }
+    });
+    let cur_price: u64 = fund_accounts
+        .hold_detail
+        .values()
+        .map(|x| x.total_value)
+        .sum();
+    fund_accounts.account_value = (cur_price as f64 / 1000000.0) as f32;
+    fund_accounts
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,5 +171,25 @@ mod tests {
         );
         assert!((result.balance_price + 3400.0).abs() < 2.0);
         assert!((result.account_value - 4703.69).abs() < 2.0);
+    }
+
+    #[test]
+    fn test_single_buy_more_002021() {
+        let start_date = date!(2010 - 1 - 1);
+        let end_date = date!(2021 - 1 - 1);
+        let result = run_fund_buy_more_strategy(start_date, end_date, 1, &[002021u32], &[100.0]);
+        println!("{:?}", result);
+        // assert!((result.balance_price + 13200.0).abs() < 2.0);
+        // assert!((result.account_value - 33706.85).abs() < 2.0);
+    }
+
+    #[test]
+    fn test_single_buy_more_070032() {
+        let start_date = date!(2010 - 1 - 1);
+        let end_date = date!(2021 - 1 - 1);
+        let result = run_fund_buy_more_strategy(start_date, end_date, 1, &[070032u32], &[100.0]);
+        println!("{:?}", result);
+        // assert!((result.balance_price + 1000.0).abs() < 2.0);
+        // assert!((result.account_value - 1165.89).abs() < 2.0);
     }
 }

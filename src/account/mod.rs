@@ -21,6 +21,10 @@ pub trait UpdateAccountItem {
     fn get_current_value(&self) -> f32;
     /// 获取当前资产
     fn get_current_asset(&self) -> f32;
+    /// 获取平均持仓价格
+    fn get_average_price(&self) -> Option<f32>;
+    /// 获取最低持仓价格
+    fn get_lowest_price(&self) -> Option<f32>;
     /// 以指定数量买入（适用于股票）,返回交易信息
     fn buy_with_volume(&mut self, data: &Self::MarketData, volume: f32) -> TradeDetail;
     /// 以总价买入（适用于基金），返回交易信息
@@ -112,10 +116,23 @@ where
     }
     /// 更新资产价格
     pub(crate) fn update_account(&mut self, code: u32, info: T::MarketData) {
-        let fund = self.hold_detail.entry(code).or_insert_with(T::default);
-        fund.update_account(&info);
+        let item = self.hold_detail.entry(code).or_insert_with(T::default);
+        item.update_account(&info);
     }
-    // 以指定数量标的买入
+
+    /// 获取平均持仓价格
+    pub(crate) fn get_object_average_price(&self, code: u32) -> Option<f32> {
+        self.hold_detail
+            .get(&code)
+            .map(|x| x.get_average_price().unwrap())
+    }
+    /// 获取最低持仓价格
+    pub(crate) fn get_object_lowest_price(&self, code: u32) -> Option<f32> {
+        self.hold_detail
+            .get(&code)
+            .map(|x| x.get_lowest_price().unwrap())
+    }
+    /// 以指定数量标的买入
     fn buy_with_volume(&mut self, code: u32, info: &T::MarketData, volume: f32) {
         let item = self.hold_detail.entry(code).or_insert_with(T::default);
         let detail = item.buy_with_volume(&info, volume);
@@ -134,7 +151,7 @@ where
         });
     }
 
-    // 以指定总价买入
+    /// 以指定总价买入
     pub(crate) fn buy_with_cost(&mut self, code: u32, info: &T::MarketData, price: f32) {
         let item = self.hold_detail.entry(code).or_insert_with(T::default);
         let detail = item.buy_with_cost(info, price);
@@ -152,7 +169,7 @@ where
         });
     }
 
-    // 以当前价格卖出指定数量
+    /// 以当前价格卖出指定数量
     fn sell_with_volume(&mut self, code: u32, info: &T::MarketData, volume: f32) {
         if let Some(item) = self.hold_detail.get_mut(&code) {
             let detail = item.sell_with_volume(&info, volume);
@@ -175,7 +192,7 @@ where
         }
     }
 
-    // 以持仓比例卖出
+    /// 以持仓比例卖出
     fn sell_with_proportion(&mut self, code: u32, info: &T::MarketData, proportion: f32) {
         if let Some(item) = self.hold_detail.get_mut(&code) {
             let detail = item.sell_with_proportion(&info, proportion);
@@ -196,6 +213,16 @@ where
                 self.hold_detail.remove_entry(&code);
             }
         }
+    }
+
+    /// 显示详细持仓情况
+    fn show_hold_detail(&self) {
+        unimplemented!()
+    }
+
+    /// 显示详细交易信息
+    fn show_transaction_detail(&self) {
+        unimplemented!()
     }
 }
 
@@ -229,6 +256,8 @@ mod test {
             shares: 5000,
             cash_bonus: 0,
             total_value: 100000000,
+            avg_price: Some(20000),
+            lowest_price: Some(20000),
         };
         let expect_trade_history = TradeHistory {
             trade_time: fund_data.date.with_hms(19, 0, 0).unwrap(),
@@ -261,6 +290,8 @@ mod test {
             shares: 10000,
             cash_bonus: 0,
             total_value: 200000000,
+            avg_price: Some(20000),
+            lowest_price: Some(20000),
         };
         let expect_trade_history = TradeHistory {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
@@ -294,6 +325,8 @@ mod test {
             shares: 5000,
             cash_bonus: 0,
             total_value: 100000000,
+            avg_price: Some(20000),
+            lowest_price: Some(20000),
         };
         let expect_trade_history = TradeHistory {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
@@ -344,6 +377,8 @@ mod test {
             shares: 5000,
             cash_bonus: 0,
             total_value: 100000000,
+            avg_price: Some(20000),
+            lowest_price: Some(20000),
         };
         let expect_trade_history = TradeHistory {
             trade_time: fund_data1.date.with_hms(19, 0, 0).unwrap(),
@@ -375,6 +410,8 @@ mod test {
             shares: 2500,
             cash_bonus: 0,
             total_value: 50000000,
+            avg_price: Some(20000),
+            lowest_price: Some(20000),
         };
         let expect_trade_history = TradeHistory {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
@@ -407,6 +444,8 @@ mod test {
             shares: 2500,
             cash_bonus: 0,
             total_value: 50000000,
+            avg_price: Some(20000),
+            lowest_price: Some(20000),
         };
         let expect_trade_history = TradeHistory {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
