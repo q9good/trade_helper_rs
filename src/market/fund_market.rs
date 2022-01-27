@@ -1,4 +1,5 @@
 use anyhow::{anyhow, Result};
+use itertools::Itertools;
 // use chrono::prelude::*;
 // use reqwest::header::USER_AGENT;
 use reqwest::Url;
@@ -122,11 +123,17 @@ pub(crate) fn get_fund_history(
     end_date: Date,
 ) -> Result<Vec<FundData>> {
     let client = reqwest::blocking::Client::new();
+    let format = format_description::parse("[year]-[month]-[day]")?;
+    let start_date_str = start_date.format(&format)?;
+    let end_date_str = end_date.format(&format)?;
     let params = [
         ("fundCode", format!("{:0>6}", code)),
         ("pageIndex", "1".to_string()),
         ("pageSize", "65535".to_string()),
+        ("startDate", start_date_str),
+        ("endDate", end_date_str)
     ];
+    // http://api.fund.eastmoney.com/f10/lsjz?callback=jQuery18308885693300284889_1643120391690&fundCode=002021&pageIndex=4&pageSize=20&startDate=&endDate=&_=1643120473795
     let url = Url::parse_with_params(
         "http://api.fund.eastmoney.com/f10/lsjz?callback=jQuery18304038998523093684_1586160530315",
         &params,
@@ -136,7 +143,7 @@ pub(crate) fn get_fund_history(
         .get(url)
         .header(
             "Referer",
-            &format!("http://fundf10.eastmoney.com/jjjz_{:0>6}.html", code),
+            &format!("http://fundf10.eastmoney.com/"),
         )
         .send()?;
     let content = res.text()?;
@@ -167,10 +174,15 @@ impl QuantitativeMarket for FundData {
 
     fn query_history_info(code: u32, start_date: Date, end_date: Date) -> Vec<FundData> {
         let client = reqwest::blocking::Client::new();
+        let format = format_description::parse("[year]-[month]-[day]").unwrap();
+        let start_date_str = start_date.format(&format).unwrap_or("2000-01-02".to_string());
+        let end_date_str = end_date.format(&format).unwrap_or("2000-01-01".to_string());
         let params = [
             ("fundCode", format!("{:0>6}", code)),
             ("pageIndex", "1".to_string()),
             ("pageSize", "65535".to_string()),
+            ("startDate", start_date_str),
+            ("endDate", end_date_str)
         ];
         if let Ok(url) = Url::parse_with_params(
         "http://api.fund.eastmoney.com/f10/lsjz?callback=jQuery18304038998523093684_1586160530315",
@@ -181,7 +193,7 @@ impl QuantitativeMarket for FundData {
                 .get(url)
                 .header(
                     "Referer",
-                    &format!("http://fundf10.eastmoney.com/jjjz_{:0>6}.html", code),
+                    &format!("http://fundf10.eastmoney.com"),
                 )
                 .send() {
                 if let Ok(content) = res.text(){
@@ -189,10 +201,6 @@ impl QuantitativeMarket for FundData {
                     let end = content.find(']').unwrap();
                     if let Ok(all_fund_data)= serde_json::from_str::<Vec<FundData>>(&content[begin..=end]) {
                        return all_fund_data
-                            .into_iter()
-                            .filter(|x| x.date >= start_date && x.date <= end_date)
-                            .rev()
-                            .collect::<Vec<FundData>>()
                     }
                 }
             }

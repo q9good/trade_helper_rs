@@ -1,3 +1,4 @@
+use std::fmt::Debug;
 use anyhow::Result;
 use std::iter::Iterator;
 use time::{macros::*, Date, PrimitiveDateTime};
@@ -31,14 +32,17 @@ pub struct InfoMixer<T: QuantitativeMarket> {
 
 impl<T> InfoMixer<T>
 where
-    T: QuantitativeMarket,
+    T: QuantitativeMarket + Debug,
 {
     pub(crate) fn new(codes: &[u32], start_date: Date, end_date: Date) -> Self {
-        let infos = codes
+        let infos:Vec<Vec<T>> = codes
             .iter()
             .map(|x| T::query_history_info(*x, start_date, end_date))
             // .filter(|x|!x.is_empty())
             .collect();
+        #[cfg(test)]
+            println!("{:#?}", infos[0]);
+            // infos[0].iter().for_each(|x|println!("{:#?}", x.date));
         InfoMixer {
             code: codes.into(),
             info: infos,

@@ -66,12 +66,12 @@ pub fn run_fund_buy_more_strategy(
             && fund_data.date.month() != *prev_fund_month.get(&code).unwrap()
         {
             let mut budget = *fund_budget[&code];
-            if fund_accounts.get_object_lowest_price(code).is_some()
+            /*if fund_accounts.get_object_lowest_price(code).is_some()
                 && fund_accounts.get_object_lowest_price(code).unwrap()
                     > fund_data.unit_nav as f32 * 0.0001
             {
-                budget *= 2.0;
-            } else if fund_accounts.get_object_average_price(code).is_some()
+                budget *= 1.5;
+            } else*/ if fund_accounts.get_object_average_price(code).is_some()
                 && fund_accounts.get_object_average_price(code).unwrap()
                     > fund_data.unit_nav as f32 * 0.0001
             {
