@@ -41,6 +41,9 @@ impl FundAccount {
 impl UpdateAccountItem for FundAccount {
     type MarketData = FundData;
     // fn default() -> Self {}
+    fn get_account_name(&self) -> String {
+        String::from("fund")
+    }
     fn update_account(&mut self, data: &FundData) {
         self.check_dividend(data);
         self.net_value = data.unit_nav;
@@ -48,21 +51,21 @@ impl UpdateAccountItem for FundAccount {
         self.total_value = self.net_value as u64 * self.shares as u64;
     }
 
-    fn get_current_value(&self) -> f32 {
-        self.net_value as f32 * 0.0001
-    }
     fn get_current_volume(&self) -> f32 {
         self.shares as f32 * 0.01
     }
+    fn get_current_value(&self) -> f32 {
+        self.net_value as f32 * 0.0001
+    }
 
+    fn get_current_asset(&self) -> f32 {
+        (self.total_value as f64 * 0.000001) as f32
+    }
     fn get_average_price(&self) -> Option<f32> {
         self.avg_price.map(|x| x as f32 * 0.0001)
     }
     fn get_lowest_price(&self) -> Option<f32> {
         self.lowest_price.map(|x| x as f32 * 0.0001)
-    }
-    fn get_current_asset(&self) -> f32 {
-        (self.total_value as f64 * 0.000001) as f32
     }
 
     fn buy_with_volume(&mut self, data: &FundData, volume: f32) -> TradeDetail {

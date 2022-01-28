@@ -3,6 +3,7 @@ pub mod stock_account;
 use std::collections::HashMap;
 
 // use serde::de;
+use crate::account::TradeDetail::{Buy, Sell};
 use time::macros::date;
 use time::{format_description, Date, PrimitiveDateTime};
 
@@ -13,6 +14,8 @@ pub trait UpdateAccountItem {
     type MarketData: QuantitativeMarket;
     /// 默认账户
     // fn default() -> Self;
+    ///
+    fn get_account_name(&self) -> String;
     /// 根据行情更新当前持仓信息
     fn update_account(&mut self, data: &Self::MarketData);
     /// 获取当前持仓数量
@@ -216,13 +219,58 @@ where
     }
 
     /// 显示详细持仓情况
-    fn show_hold_detail(&self) {
-        unimplemented!()
+    pub(crate) fn show_hold_detail(&self) {
+        let _account = T::default();
+        println!(
+            "You have {} {} now",
+            self.hold_detail.len(),
+            _account.get_account_name()
+        );
+        for (k, v) in &self.hold_detail {
+            println!(
+                "{code:0>6}: {value}",
+                code = k,
+                value = v.get_current_asset()
+            );
+        }
     }
 
     /// 显示详细交易信息
-    fn show_transaction_detail(&self) {
-        unimplemented!()
+    pub(crate) fn show_transaction_detail(&self) {
+        let _account = T::default();
+        for (k, v) in &self.trade_history {
+            println!(
+                "for {} {:0>6}, you have trade {} times",
+                _account.get_account_name(),
+                k,
+                v.len()
+            );
+            v.iter().for_each(|x| {
+                let (year, month, day) = x.trade_time.to_calendar_date();
+                println!(
+                    "{}-{}-{}: {} ",
+                    year,
+                    month,
+                    day,
+                    match &x.trade_detail {
+                        Buy(item) => {
+                            format!(
+                                "buy {:.2} with {:.2}",
+                                item.deal_volume,
+                                item.deal_price * item.deal_volume
+                            )
+                        }
+                        Sell(item) => {
+                            format!(
+                                "sell {:.2} at {:.2}",
+                                item.deal_volume,
+                                item.deal_price * item.deal_volume
+                            )
+                        }
+                    },
+                )
+            })
+        }
     }
 }
 
@@ -494,6 +542,22 @@ mod test {
 
     #[test]
     fn test_it() {
-        assert_eq!(true, true);
+        let mut account = Account::<FundAccount>::new();
+        let fund_data1 = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
+        let fund_data2 = FundData::new(date!(2021 - 10 - 1), 20000, 35000, None);
+        let expect_trade_history = TradeHistory {
+            trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
+            trade_obj: 1,
+            trade_detail: TradeDetail::Sell(TradeItem {
+                deal_price: 2.0,
+                deal_volume: 50.0,
+            }),
+        };
+
+        account.buy_with_cost(000001, &fund_data1, 100.0);
+
+        account.sell_with_proportion(000001, &fund_data2, 1.0);
+        account.show_hold_detail();
+        account.show_transaction_detail();
     }
 }
