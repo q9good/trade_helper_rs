@@ -72,6 +72,6 @@ fn main() {
     }
 
     let result = run_fund_aip_strategy(start_date, end_date, opt.day, &opt.fund, &opt.budget);
-    println!("{}", result.account_value);
-    println!("{}", result.balance_price);
+    result.show_hold_detail();
+    result.show_transaction_detail();
 }
