@@ -1,4 +1,33 @@
 #![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
+
+//! ## generic structure and trait for all account types
+//! 所有账户相关的trait和结构体
+//! ----
+//!
+//! ### Trait UpdateAccountItem
+//!
+//! 更新账户信息，具体方法包括：
+//! + get_account_name： 获取账户名称，基金或股票账户
+//! + update_account: 根据实时行情更新账户持仓信息
+//! + get_current_volume: 获取当前持仓数量
+//! + get_current_value: 获取当前持仓价格
+//! + get_current_asset: 获取当前资产,即持仓数量×持仓价格
+//! + get_average_price: 获取当前持仓均价,根据买入成本计算
+//! + get_lowest_price: 获取当前最低买入价格
+//! + buy_with_volume: 以指定数量买入，适用于股票账户
+//! + buy_with_cost: 以指定价格买入，适用于基金账户
+//! + sell_with_volume: 以指定数量卖出
+//! + sell_with_proportion: 以指定比例卖出
+//!
+//! ### struct Account
+//! ----
+//! 任何实现了UpdateAccountItem的类型都可以被构造账户类型，调用UpdateAccountItem的方法
+//! 统一实现Account具体信息的维护，具体成员介绍如下：
+//! + hold_detail: 持仓详情，支持多个交易标的，key是股票/基金代码，value是具体信息，必须实现UpdateAccountItem
+//! + trade_history: 交易历史，支持多个交易标的，key是股票/基金代码，value是Vec<TradeHistory>，以时间先后排序
+//! + account_value: 持仓账面总价值
+//! + balance_value：账户余额,可能为负(一直买入未卖出)
+
 pub mod fund_account;
 pub mod stock_account;
 use std::collections::HashMap;
@@ -228,7 +257,7 @@ where
         );
         for (k, v) in &self.hold_detail {
             println!(
-                "{code:0>6}: {value}",
+                "{code:0>6}: {value:.2}",
                 code = k,
                 value = v.get_current_asset()
             );

@@ -71,7 +71,12 @@ fn main() {
         );
     }
 
-    let result = run_fund_aip_strategy(start_date, end_date, opt.day, &opt.fund, &opt.budget);
+    let result = run_fund_buy_more_strategy(start_date, end_date, opt.day, &opt.fund, &opt.budget);
     result.show_hold_detail();
     result.show_transaction_detail();
+    println!(
+        "At last, account value: {value:.2}",
+        value = result.account_value
+    );
+    println!("currency: {currency:.2}", currency = result.balance_price);
 }

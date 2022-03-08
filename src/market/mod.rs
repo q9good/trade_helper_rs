@@ -1,4 +1,20 @@
 #![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
+
+//! ## 市场信息
+//! ----
+//!  
+//! ### Trait QuantitativeMarket
+//! ----
+//! 定义市场行情数据的获取方法
+//! + get_info_datetime: 获取当前市场行情的时间信息
+//! + query_history_info: 获取指定时间范围内某具体投资标的(由code指定)的行情信息
+//!
+//! ### Struct InfoMixer
+//! ----
+//! 用于同时关注多个标的的行情信息，实现Iterator接口，将按时间先后顺序返回行情信息
+//! + code: 关注标的的代码
+//! + info：各个关注标的的行情信息，每个具体标的的行情信息是一个Vec<T: QuantitativeMarket>
+
 use anyhow::Result;
 use std::fmt::Debug;
 use std::iter::Iterator;
