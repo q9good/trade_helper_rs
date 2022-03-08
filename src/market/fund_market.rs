@@ -2,11 +2,12 @@ use anyhow::{anyhow, Result};
 use itertools::Itertools;
 // use chrono::prelude::*;
 // use reqwest::header::USER_AGENT;
-use reqwest::Url;
+use reqwest::{Url, Client};
 use serde::{de, Deserialize, Deserializer};
 // use std::collections::HashMap;
 use time::macros::date;
 use time::{format_description, Date, PrimitiveDateTime};
+use async_trait::async_trait;
 
 use super::QuantitativeMarket;
 
@@ -122,7 +123,7 @@ pub(crate) fn get_fund_history(
     start_date: Date,
     end_date: Date,
 ) -> Result<Vec<FundData>> {
-    let client = reqwest::blocking::Client::new();
+    let mut client = reqwest::blocking::Client::new();
     let format = format_description::parse("[year]-[month]-[day]")?;
     let start_date_str = start_date.format(&format)?;
     let end_date_str = end_date.format(&format)?;
@@ -164,13 +165,13 @@ pub(crate) fn get_fund_history(
     }
 }
 
+#[async_trait]
 impl QuantitativeMarket for FundData {
     fn get_info_datetime(&self) -> PrimitiveDateTime {
         self.date.with_hms(19, 0, 0).unwrap()
     }
 
-    fn query_history_info(code: u32, start_date: Date, end_date: Date) -> Vec<FundData> {
-        let client = reqwest::blocking::Client::new();
+    async fn query_history_info(code: u32, start_date: Date, end_date: Date, cli: Client) -> Vec<FundData> {
         let format = format_description::parse("[year]-[month]-[day]").unwrap();
         let start_date_str = start_date
             .format(&format)
@@ -188,14 +189,14 @@ impl QuantitativeMarket for FundData {
         &params ) {
             #[cfg(test)]
             println!("{}", url);
-            if let Ok(res) = client
+            if let Ok(res) = cli
                 .get(url)
                 .header(
                     "Referer",
                     &format!("http://fundf10.eastmoney.com"),
                 )
-                .send() {
-                if let Ok(content) = res.text(){
+                .send().await {
+                if let Ok(content) = res.text().await{
                     let begin = content.find('[').unwrap();
                     let end = content.find(']').unwrap();
                     if let Ok(all_fund_data)= serde_json::from_str::<Vec<FundData>>(&content[begin..=end]) {
