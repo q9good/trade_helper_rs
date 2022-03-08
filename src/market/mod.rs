@@ -38,7 +38,7 @@ pub struct InfoMixer<T: QuantitativeMarket> {
 
 impl<T> InfoMixer<T>
 where
-    T: QuantitativeMarket + Debug,
+    T: QuantitativeMarket + Debug + std::marker::Send + 'static + Copy,
 {
     pub(crate) fn new(codes: &[u32], start_date: Date, end_date: Date) -> Self {
         let runtime = Builder::new_multi_thread()
@@ -48,11 +48,14 @@ where
         .unwrap();
         let mut mutex_infos = Arc::new(Mutex::new(Vec::<Vec<T>>::new()));
         let mut handles = Vec::with_capacity(codes.len());
+        let owned_codes = codes.to_owned();
         for i in 0..codes.len() {
+            let code = owned_codes[i];
+            let info_copy = mutex_infos.clone();
             handles.push(runtime.spawn(async move {
-                let mut client = reqwest::Client::new();
-                let ret = T::query_history_info(codes[i], start_date, end_date, client).await;
-                let mut copy = mutex_infos.lock().await;
+                let client = reqwest::Client::new();
+                let ret = T::query_history_info(code, start_date, end_date, client).await;
+                let mut copy = info_copy.lock().await;
                 copy.push(ret);
             }));
         }

@@ -20,7 +20,7 @@ pub enum FundStatus {
 
 /// fund information
 #[allow(non_snake_case)]
-#[derive(Debug, Deserialize, PartialEq, PartialOrd)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Copy, Clone)]
 pub struct FundData {
     #[serde(alias = "FSRQ")]
     #[serde(deserialize_with = "deserialize_with_date")]
@@ -81,6 +81,8 @@ impl FundData {
         }
     }
 }
+
+unsafe impl Send for FundData {}
 
 fn deserialize_with_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
