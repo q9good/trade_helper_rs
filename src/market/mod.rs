@@ -1,3 +1,4 @@
+#![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
 use anyhow::Result;
 use std::fmt::Debug;
 use std::iter::Iterator;
@@ -46,11 +47,11 @@ where
         .enable_all()
         .build()
         .unwrap();
-        let mut mutex_infos = Arc::new(Mutex::new(Vec::<Vec<T>>::new()));
+        let mutex_infos = Arc::new(Mutex::new(Vec::<Vec<T>>::new()));
         let mut handles = Vec::with_capacity(codes.len());
         let owned_codes = codes.to_owned();
-        for i in 0..codes.len() {
-            let code = owned_codes[i];
+        // for i in 0..codes.len() {
+        for code in owned_codes.into_iter().take(codes.len()){
             let info_copy = mutex_infos.clone();
             handles.push(runtime.spawn(async move {
                 let client = reqwest::Client::new();

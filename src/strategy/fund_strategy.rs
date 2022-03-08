@@ -1,9 +1,10 @@
+#![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
 use crate::account::fund_account::FundAccount;
-use crate::account::{Account, UpdateAccountItem};
-use crate::market::fund_market::{get_fund_history, FundData};
+use crate::account::Account;
+use crate::market::fund_market::FundData;
 use crate::market::InfoMixer;
 use std::collections::HashMap;
-use time::{macros::*, Date, Duration, Month, OffsetDateTime};
+use time::{macros::*, Date, Month};
 
 ///  Automatic Investment Plan
 pub fn run_fund_aip_strategy(
@@ -13,7 +14,7 @@ pub fn run_fund_aip_strategy(
     fund: &[u32],
     budget: &[f32],
 ) -> Account<FundAccount> {
-    let mut fund_mixer = InfoMixer::<FundData>::new(fund, start, end);
+    let fund_mixer = InfoMixer::<FundData>::new(fund, start, end);
     let mut fund_accounts = Account::<FundAccount>::new();
     // let mut prev_fund_month = HashMap::<u32, Month>::new();
     let fund_budget: HashMap<_, _> = fund.iter().zip(budget.iter()).collect();
@@ -51,7 +52,7 @@ pub fn run_fund_buy_more_strategy(
     fund: &[u32],
     budget: &[f32],
 ) -> Account<FundAccount> {
-    let mut fund_mixer = InfoMixer::<FundData>::new(fund, start, end);
+    let fund_mixer = InfoMixer::<FundData>::new(fund, start, end);
     let mut fund_accounts = Account::<FundAccount>::new();
     // let mut prev_fund_month = HashMap::<u32, Month>::new();
     let fund_budget: HashMap<_, _> = fund.iter().zip(budget.iter()).collect();

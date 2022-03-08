@@ -1,6 +1,6 @@
 use super::{TradeDetail, TradeItem, UpdateAccountItem};
 use crate::market::fund_market::FundData;
-use time::{macros::*, Date};
+use time::macros::*;
 
 /// 基金账户信息，为避免浮点运算，部分值乘以一定倍数。
 /// 对外接口使用真实值

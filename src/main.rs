@@ -7,7 +7,7 @@ mod market;
 mod strategy;
 use clap::Parser;
 use strategy::fund_strategy::*;
-use time::{format_description, macros::*, Date, OffsetDateTime};
+use time::{format_description, Date};
 #[allow(clippy::zero_prefixed_literal)]
 // use chrono::{Datelike, Local, };
 // use crossbeam_channel::{bounded, unbounded};
