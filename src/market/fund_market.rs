@@ -1,12 +1,11 @@
+#![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
 use anyhow::{anyhow, Result};
-use itertools::Itertools;
-// use chrono::prelude::*;
-// use reqwest::header::USER_AGENT;
-use reqwest::Url;
+// use itertools::Itertools;
+use reqwest::{Url, Client};
 use serde::{de, Deserialize, Deserializer};
 // use std::collections::HashMap;
-use time::macros::date;
-use time::{format_description, Date, PrimitiveDateTime};
+use time::{macros::*, format_description, Date, PrimitiveDateTime};
+use async_trait::async_trait;
 
 use super::QuantitativeMarket;
 
@@ -19,7 +18,7 @@ pub enum FundStatus {
 
 /// fund information
 #[allow(non_snake_case)]
-#[derive(Debug, Deserialize, PartialEq, PartialOrd)]
+#[derive(Debug, Deserialize, PartialEq, PartialOrd, Copy, Clone)]
 pub struct FundData {
     #[serde(alias = "FSRQ")]
     #[serde(deserialize_with = "deserialize_with_date")]
@@ -81,6 +80,8 @@ impl FundData {
     }
 }
 
+unsafe impl Send for FundData {}
+
 fn deserialize_with_date<'de, D>(deserializer: D) -> Result<Date, D::Error>
 where
     D: Deserializer<'de>,
@@ -141,7 +142,7 @@ pub(crate) fn get_fund_history(
     println!("{}", url);
     let res = client
         .get(url)
-        .header("Referer", &format!("http://fundf10.eastmoney.com/"))
+        .header("Referer", "http://fundf10.eastmoney.com/".to_string())
         .send()?;
     let content = res.text()?;
     let begin = content.find('[').unwrap();
@@ -164,18 +165,18 @@ pub(crate) fn get_fund_history(
     }
 }
 
+#[async_trait]
 impl QuantitativeMarket for FundData {
     fn get_info_datetime(&self) -> PrimitiveDateTime {
         self.date.with_hms(19, 0, 0).unwrap()
     }
 
-    fn query_history_info(code: u32, start_date: Date, end_date: Date) -> Vec<FundData> {
-        let client = reqwest::blocking::Client::new();
+    async fn query_history_info(code: u32, start_date: Date, end_date: Date, cli: Client) -> Vec<FundData> {
         let format = format_description::parse("[year]-[month]-[day]").unwrap();
         let start_date_str = start_date
             .format(&format)
-            .unwrap_or("2000-01-02".to_string());
-        let end_date_str = end_date.format(&format).unwrap_or("2000-01-01".to_string());
+            .unwrap_or_else(|_|"2000-01-02".to_string());
+        let end_date_str = end_date.format(&format).unwrap_or_else(|_|"2000-01-01".to_string());
         let params = [
             ("fundCode", format!("{:0>6}", code)),
             ("pageIndex", "1".to_string()),
@@ -188,14 +189,14 @@ impl QuantitativeMarket for FundData {
         &params ) {
             #[cfg(test)]
             println!("{}", url);
-            if let Ok(res) = client
+            if let Ok(res) = cli
                 .get(url)
                 .header(
                     "Referer",
-                    &format!("http://fundf10.eastmoney.com"),
+                    "http://fundf10.eastmoney.com".to_string()
                 )
-                .send() {
-                if let Ok(content) = res.text(){
+                .send().await {
+                if let Ok(content) = res.text().await{
                     let begin = content.find('[').unwrap();
                     let end = content.find(']').unwrap();
                     if let Ok(all_fund_data)= serde_json::from_str::<Vec<FundData>>(&content[begin..=end]) {

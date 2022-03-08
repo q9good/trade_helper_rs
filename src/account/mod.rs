@@ -1,3 +1,5 @@
+#![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
+
 //! ## generic structure and trait for all account types
 //! 所有账户相关的trait和结构体
 //! ----
@@ -25,14 +27,14 @@
 //! + trade_history: 交易历史，支持多个交易标的，key是股票/基金代码，value是Vec<TradeHistory>，以时间先后排序
 //! + account_value: 持仓账面总价值
 //! + balance_value：账户余额,可能为负(一直买入未卖出)
+
 pub mod fund_account;
 pub mod stock_account;
 use std::collections::HashMap;
 
 // use serde::de;
 use crate::account::TradeDetail::{Buy, Sell};
-use time::macros::date;
-use time::{format_description, Date, PrimitiveDateTime};
+use time::{macros::*, PrimitiveDateTime};
 
 use crate::market::QuantitativeMarket;
 
@@ -165,7 +167,7 @@ where
     /// 以指定数量标的买入
     fn buy_with_volume(&mut self, code: u32, info: &T::MarketData, volume: f32) {
         let item = self.hold_detail.entry(code).or_insert_with(T::default);
-        let detail = item.buy_with_volume(&info, volume);
+        let detail = item.buy_with_volume(info, volume);
         // 更新账户余额
         self.balance_price += detail.calc_cost_or_earning();
         // 更新账户资产
@@ -202,7 +204,7 @@ where
     /// 以当前价格卖出指定数量
     fn sell_with_volume(&mut self, code: u32, info: &T::MarketData, volume: f32) {
         if let Some(item) = self.hold_detail.get_mut(&code) {
-            let detail = item.sell_with_volume(&info, volume);
+            let detail = item.sell_with_volume(info, volume);
             // 更新账户余额
             self.balance_price += detail.calc_cost_or_earning();
             // 记录交易信息
@@ -225,7 +227,7 @@ where
     /// 以持仓比例卖出
     fn sell_with_proportion(&mut self, code: u32, info: &T::MarketData, proportion: f32) {
         if let Some(item) = self.hold_detail.get_mut(&code) {
-            let detail = item.sell_with_proportion(&info, proportion);
+            let detail = item.sell_with_proportion(info, proportion);
             // 更新账户余额
             self.balance_price += detail.calc_cost_or_earning();
             // 记录交易信息

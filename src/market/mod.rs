@@ -1,3 +1,5 @@
+#![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
+
 //! ## 市场信息
 //! ----
 //!  
@@ -12,19 +14,26 @@
 //! 用于同时关注多个标的的行情信息，实现Iterator接口，将按时间先后顺序返回行情信息
 //! + code: 关注标的的代码
 //! + info：各个关注标的的行情信息，每个具体标的的行情信息是一个Vec<T: QuantitativeMarket>
+
 use anyhow::Result;
 use std::fmt::Debug;
 use std::iter::Iterator;
+use std::sync::Arc;
 use time::{macros::*, Date, PrimitiveDateTime};
+use reqwest::Client;
+use tokio::runtime::Builder;
+use tokio::sync::Mutex;
+use async_trait::async_trait;
 
 pub mod fund_market;
 
 /// 市场行情
+#[async_trait]
 pub trait QuantitativeMarket {
     /// 行情的日期时间
     fn get_info_datetime(&self) -> PrimitiveDateTime;
 
-    fn query_history_info(code: u32, start_date: Date, end_date: Date) -> Vec<Self>
+    async fn query_history_info(code: u32, start_date: Date, end_date: Date, cli: Client) -> Vec<Self>
     where
         Self: std::marker::Sized;
 }
@@ -46,14 +55,40 @@ pub struct InfoMixer<T: QuantitativeMarket> {
 
 impl<T> InfoMixer<T>
 where
-    T: QuantitativeMarket + Debug,
+    T: QuantitativeMarket + Debug + std::marker::Send + 'static + Copy,
 {
     pub(crate) fn new(codes: &[u32], start_date: Date, end_date: Date) -> Self {
-        let infos: Vec<Vec<T>> = codes
-            .iter()
-            .map(|x| T::query_history_info(*x, start_date, end_date))
-            // .filter(|x|!x.is_empty())
-            .collect();
+        let runtime = Builder::new_multi_thread()
+        .worker_threads(1)
+        .enable_all()
+        .build()
+        .unwrap();
+        let mutex_infos = Arc::new(Mutex::new(Vec::<Vec<T>>::new()));
+        let mut handles = Vec::with_capacity(codes.len());
+        let owned_codes = codes.to_owned();
+        // for i in 0..codes.len() {
+        for code in owned_codes.into_iter().take(codes.len()){
+            let info_copy = mutex_infos.clone();
+            handles.push(runtime.spawn(async move {
+                let client = reqwest::Client::new();
+                let ret = T::query_history_info(code, start_date, end_date, client).await;
+                let mut copy = info_copy.lock().await;
+                copy.push(ret);
+            }));
+        }
+        for handle in handles {
+            runtime.block_on(handle).unwrap();
+        }
+        let infos:Vec<_> = Arc::try_unwrap(mutex_infos).unwrap().into_inner();
+        // get the inner value of Arc<Mutex<T>>
+        // get the inner of MutexGuard<T>
+        // let infos:Vec<Vec<T>> =  mutex_infos.into_iter();
+        // lock().get_mut();
+        // let infos: Vec<Vec<T>> = codes
+        //     .iter()
+        //     .map(|x| T::query_history_info(*x, start_date, end_date, client))
+        //     // .filter(|x|!x.is_empty())
+        //     .collect();
         #[cfg(test)]
         println!("{:#?}", infos[0]);
         // infos[0].iter().for_each(|x|println!("{:#?}", x.date));
