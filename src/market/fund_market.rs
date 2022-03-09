@@ -1,11 +1,14 @@
-#![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
+#![cfg_attr(
+    debug_assertions,
+    allow(dead_code, unused_imports, unused_variables, unused_mut)
+)]
 use anyhow::{anyhow, Result};
 // use itertools::Itertools;
-use reqwest::{Url, Client};
+use reqwest::{Client, Url};
 use serde::{de, Deserialize, Deserializer};
 // use std::collections::HashMap;
-use time::{macros::*, format_description, Date, PrimitiveDateTime};
 use async_trait::async_trait;
+use time::{format_description, macros::*, Date, PrimitiveDateTime};
 
 use super::QuantitativeMarket;
 
@@ -171,12 +174,19 @@ impl QuantitativeMarket for FundData {
         self.date.with_hms(19, 0, 0).unwrap()
     }
 
-    async fn query_history_info(code: u32, start_date: Date, end_date: Date, cli: Client) -> Vec<FundData> {
+    async fn query_history_info(
+        code: u32,
+        start_date: Date,
+        end_date: Date,
+        cli: Client,
+    ) -> Vec<FundData> {
         let format = format_description::parse("[year]-[month]-[day]").unwrap();
         let start_date_str = start_date
             .format(&format)
-            .unwrap_or_else(|_|"2000-01-02".to_string());
-        let end_date_str = end_date.format(&format).unwrap_or_else(|_|"2000-01-01".to_string());
+            .unwrap_or_else(|_| "2000-01-02".to_string());
+        let end_date_str = end_date
+            .format(&format)
+            .unwrap_or_else(|_| "2000-01-01".to_string());
         let params = [
             ("fundCode", format!("{:0>6}", code)),
             ("pageIndex", "1".to_string()),

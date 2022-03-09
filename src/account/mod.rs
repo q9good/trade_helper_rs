@@ -1,4 +1,7 @@
-#![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
+#![cfg_attr(
+    debug_assertions,
+    allow(dead_code, unused_imports, unused_variables, unused_mut)
+)]
 
 //! ## generic structure and trait for all account types
 //! 所有账户相关的trait和结构体

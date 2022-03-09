@@ -1,4 +1,7 @@
-#![cfg_attr(debug_assertions, allow(dead_code, unused_imports, unused_variables, unused_mut))]
+#![cfg_attr(
+    debug_assertions,
+    allow(dead_code, unused_imports, unused_variables, unused_mut)
+)]
 use crate::account::fund_account::FundAccount;
 use crate::account::Account;
 use crate::market::fund_market::FundData;
@@ -114,6 +117,7 @@ mod tests {
         let start_date = date!(2010 - 1 - 1);
         let end_date = date!(2021 - 1 - 1);
         let result = run_fund_aip_strategy(start_date, end_date, 1, &[002021u32], &[100.0]);
+        // dbg!(result.balance_price);
         assert!((result.balance_price + 13200.0).abs() < 2.0);
         assert!((result.account_value - 33706.85).abs() < 2.0);
     }
