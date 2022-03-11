@@ -254,7 +254,7 @@ where
     pub(crate) fn show_hold_detail(&self) {
         let _account = T::default();
         println!(
-            "You have {} {} now",
+            "You invested {} {}",
             self.hold_detail.len(),
             _account.get_account_name()
         );
