@@ -1,6 +1,11 @@
-# trade_master_rs
-----
-一个基于rust的投资策略工具,初步计划支持基金/股票的回测和实盘。
+# A fund/stock backtester in Rust[![made-with-rust](https://img.shields.io/badge/Made%20with-Rust-1f425f.svg)](https://www.rust-lang.org/)
+![Maintainer](https://img.shields.io/badge/maintainer-theMaintainer-blue)
+![Build](https://github.com/q9good/trade_helper_rs/workflows/build/badge.svg)
+![Test](https://github.com/q9good/trade_helper_rs/workflows/test/badge.svg)
+[![codecov](https://codecov.io/gh/q9good/trade_helper_rs/branch/main/graph/badge.svg?token=SQP2K46575)](https://codecov.io/gh/q9good/trade_helper_rs)
+[![Latest release](https://badgen.net/github/release/Naereen/Strapdown.js)](https://github.com/q9good/trade_helper_rs/releases/latest)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 # roadmap
 ----
 1. ~~账户的统一操作~~
