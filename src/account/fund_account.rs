@@ -51,21 +51,21 @@ impl UpdateAccountItem for FundAccount {
         self.total_value = self.net_value as u64 * self.shares as u64;
     }
 
-    fn get_current_volume(&self) -> f32 {
-        self.shares as f32 * 0.01
+    fn get_current_volume(&self) -> u32 {
+        self.shares
     }
-    fn get_current_value(&self) -> f32 {
-        self.net_value as f32 * 0.0001
+    fn get_current_value(&self) -> u32 {
+        self.net_value
     }
 
-    fn get_current_asset(&self) -> f32 {
-        (self.total_value as f64 * 0.000001) as f32
+    fn get_current_asset(&self) -> u64 {
+        self.total_value
     }
-    fn get_average_price(&self) -> Option<f32> {
-        self.avg_price.map(|x| x as f32 * 0.0001)
+    fn get_average_price(&self) -> Option<u32> {
+        self.avg_price
     }
-    fn get_lowest_price(&self) -> Option<f32> {
-        self.lowest_price.map(|x| x as f32 * 0.0001)
+    fn get_lowest_price(&self) -> Option<u32> {
+        self.lowest_price
     }
 
     fn buy_with_volume(&mut self, data: &FundData, volume: f32) -> TradeDetail {
@@ -79,8 +79,8 @@ impl UpdateAccountItem for FundAccount {
             self.lowest_price = Some(self.net_value)
         }
         TradeDetail::Buy(TradeItem {
-            deal_price: self.net_value as f32 * 0.0001,
-            deal_volume: volume,
+            deal_price: self.net_value,
+            deal_volume: (volume * 100.0) as u32,
         })
     }
     fn buy_with_cost(&mut self, data: &Self::MarketData, price: f32) -> TradeDetail {
@@ -105,8 +105,8 @@ impl UpdateAccountItem for FundAccount {
         }
 
         TradeDetail::Buy(TradeItem {
-            deal_price: self.net_value as f32 * 0.0001,
-            deal_volume: increment as f32 * 0.01,
+            deal_price: self.net_value,
+            deal_volume: increment,
         })
     }
     fn sell_with_volume(&mut self, data: &FundData, volume: f32) -> TradeDetail {
@@ -122,8 +122,8 @@ impl UpdateAccountItem for FundAccount {
         self.accumulate_value = data.accumulate_nav;
         self.total_value = (self.net_value * self.shares) as u64;
         TradeDetail::Sell(TradeItem {
-            deal_price: self.net_value as f32 * 0.0001,
-            deal_volume: decrement as f32 * 0.01,
+            deal_price: self.net_value,
+            deal_volume: decrement,
         })
     }
 
@@ -138,15 +138,15 @@ impl UpdateAccountItem for FundAccount {
                 self.shares -= sell_volume;
                 self.total_value = (self.net_value * self.shares) as u64;
                 TradeDetail::Sell(TradeItem {
-                    deal_price: self.net_value as f32 * 0.0001,
-                    deal_volume: sell_volume as f32 * 0.01,
+                    deal_price: self.net_value,
+                    deal_volume: sell_volume,
                 })
             }
             _ => {
                 self.total_value = (self.net_value * self.shares) as u64;
                 TradeDetail::Sell(TradeItem {
-                    deal_price: 0.0,
-                    deal_volume: 0.0,
+                    deal_price: 0,
+                    deal_volume: 0,
                 })
             }
         }
@@ -223,8 +223,8 @@ mod tests {
         };
 
         let expect = TradeDetail::Buy(TradeItem {
-            deal_price: 2.0,
-            deal_volume: 100.0,
+            deal_price: 20000,
+            deal_volume: 10000,
         });
 
         let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
@@ -247,8 +247,8 @@ mod tests {
             lowest_price: None,
         };
         let expect = TradeDetail::Buy(TradeItem {
-            deal_price: 2.0,
-            deal_volume: 100.0,
+            deal_price: 20000,
+            deal_volume: 10000,
         });
 
         let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
@@ -271,8 +271,8 @@ mod tests {
             lowest_price: None,
         };
         let expect = TradeDetail::Sell(TradeItem {
-            deal_price: 2.0,
-            deal_volume: 50.0,
+            deal_price: 20000,
+            deal_volume: 5000,
         });
 
         let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
@@ -295,8 +295,8 @@ mod tests {
             lowest_price: None,
         };
         let expect = TradeDetail::Sell(TradeItem {
-            deal_price: 2.0,
-            deal_volume: 50.0,
+            deal_price: 20000,
+            deal_volume: 5000,
         });
 
         let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);
@@ -320,8 +320,8 @@ mod tests {
             lowest_price: None,
         };
         let expect = TradeDetail::Buy(TradeItem {
-            deal_price: 2.0,
-            deal_volume: 100.0,
+            deal_price: 20000,
+            deal_volume: 10000,
         });
 
         let fund_data = FundData::new(date!(2021 - 9 - 30), 20000, 30000, None);

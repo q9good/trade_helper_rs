@@ -51,15 +51,15 @@ pub trait UpdateAccountItem {
     /// 根据行情更新当前持仓信息
     fn update_account(&mut self, data: &Self::MarketData);
     /// 获取当前持仓数量
-    fn get_current_volume(&self) -> f32;
+    fn get_current_volume(&self) -> u32;
     /// 获取当前持仓单价
-    fn get_current_value(&self) -> f32;
+    fn get_current_value(&self) -> u32;
     /// 获取当前资产
-    fn get_current_asset(&self) -> f32;
+    fn get_current_asset(&self) -> u64;
     /// 获取平均持仓价格
-    fn get_average_price(&self) -> Option<f32>;
+    fn get_average_price(&self) -> Option<u32>;
     /// 获取最低持仓价格
-    fn get_lowest_price(&self) -> Option<f32>;
+    fn get_lowest_price(&self) -> Option<u32>;
     /// 以指定数量买入（适用于股票）,返回交易信息
     fn buy_with_volume(&mut self, data: &Self::MarketData, volume: f32) -> TradeDetail;
     /// 以总价买入（适用于基金），返回交易信息
@@ -72,10 +72,10 @@ pub trait UpdateAccountItem {
 /// 交易信息
 #[derive(Debug, PartialEq, PartialOrd)]
 pub struct TradeItem {
-    // 成交价格
-    deal_price: f32,
-    // 成交数量
-    deal_volume: f32,
+    // 成交价格, * 10000
+    deal_price: u32,
+    // 成交数量, * 100
+    deal_volume: u32,
 }
 
 #[derive(Debug, PartialEq, PartialOrd)]
@@ -86,10 +86,10 @@ pub enum TradeDetail {
 
 impl TradeDetail {
     //Todo :考虑手续费
-    fn calc_cost_or_earning(&self) -> f32 {
+    fn calc_cost_or_earning(&self) -> i64 {
         match self {
-            Self::Buy(detail) => detail.deal_price * detail.deal_volume * -1.0,
-            Self::Sell(detail) => detail.deal_price * detail.deal_volume,
+            Self::Buy(detail) => -(detail.deal_price as i64 * detail.deal_volume as i64),
+            Self::Sell(detail) => (detail.deal_price as i64 * detail.deal_volume as i64),
         }
     }
 }
@@ -113,10 +113,10 @@ pub struct Account<T: UpdateAccountItem> {
     pub(crate) hold_detail: HashMap<u32, T>,
     // 交易记录
     trade_history: HashMap<u32, Vec<TradeHistory>>,
-    // 账面价值
-    pub(crate) account_value: f32,
-    // 账户余额,Todo：对于回测，暂时先假设资金无限
-    pub(crate) balance_price: f32,
+    // 账面价值, * 1000000
+    pub(crate) account_value: u64,
+    // 账户余额, * 1000000 Todo：对于回测，暂时先假设资金无限
+    pub(crate) balance_price: i64,
 }
 
 impl<T> Account<T>
@@ -128,24 +128,24 @@ where
         Account {
             hold_detail: HashMap::<u32, T>::new(),
             trade_history: HashMap::<u32, Vec<TradeHistory>>::new(),
-            account_value: 0.0,
-            balance_price: 0.0,
+            account_value: 0,
+            balance_price: 0,
         }
     }
     /// 获取持仓单价
-    fn get_object_price(&self, code: u32) -> Option<f32> {
+    fn get_object_price(&self, code: u32) -> Option<u32> {
         self.hold_detail.get(&code).map(|x| x.get_current_value())
         // .map_or(None, |k| Some(k.get_current_value()))
     }
 
     /// 获取持仓数量
-    fn get_object_volume(&self, code: u32) -> Option<f32> {
+    fn get_object_volume(&self, code: u32) -> Option<u32> {
         self.hold_detail.get(&code).map(|x| x.get_current_volume())
         // .map_or(None, |k| Some(k.get_current_volume()))
     }
 
     /// 获取持仓资产总价
-    fn get_object_assets(&self, code: u32) -> Option<f32> {
+    fn get_object_assets(&self, code: u32) -> Option<u64> {
         self.hold_detail.get(&code).map(|x| x.get_current_asset())
         // .map_or(None, |k| Some(k.get_current_asset()))
     }
@@ -156,13 +156,13 @@ where
     }
 
     /// 获取平均持仓价格
-    pub(crate) fn get_object_average_price(&self, code: u32) -> Option<f32> {
+    pub(crate) fn get_object_average_price(&self, code: u32) -> Option<u32> {
         self.hold_detail
             .get(&code)
             .map(|x| x.get_average_price().unwrap())
     }
     /// 获取最低持仓价格
-    pub(crate) fn get_object_lowest_price(&self, code: u32) -> Option<f32> {
+    pub(crate) fn get_object_lowest_price(&self, code: u32) -> Option<u32> {
         self.hold_detail
             .get(&code)
             .map(|x| x.get_lowest_price().unwrap())
@@ -221,7 +221,7 @@ where
                 trade_detail: detail,
             });
             // 检查是否全部卖出
-            if item.get_current_volume() == 0.0 {
+            if item.get_current_volume() == 0 {
                 self.hold_detail.remove_entry(&code);
             }
         }
@@ -262,7 +262,7 @@ where
             println!(
                 "{code:0>6}: {value:.2}",
                 code = k,
-                value = v.get_current_asset()
+                value = v.get_current_asset() as f64 * 0.000001
             );
         }
     }
@@ -288,15 +288,17 @@ where
                         Buy(item) => {
                             format!(
                                 "buy {:.2} with {:.2}",
-                                item.deal_volume,
-                                item.deal_price * item.deal_volume
+                                item.deal_volume as f32 * 0.01,
+                                (item.deal_price as u64 * item.deal_volume as u64) as f64
+                                    * 0.000001
                             )
                         }
                         Sell(item) => {
                             format!(
                                 "sell {:.2} at {:.2}",
-                                item.deal_volume,
-                                item.deal_price * item.deal_volume
+                                item.deal_volume as f32 * 0.01,
+                                (item.deal_price as u64 * item.deal_volume as u64) as f64
+                                    * 0.000001
                             )
                         }
                     },
@@ -343,8 +345,8 @@ mod test {
             trade_time: fund_data.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
-                deal_price: 2.0,
-                deal_volume: 50.0,
+                deal_price: 20000,
+                deal_volume: 5000,
             }),
         };
 
@@ -377,8 +379,8 @@ mod test {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
-                deal_price: 2.0,
-                deal_volume: 50.0,
+                deal_price: 20000,
+                deal_volume: 5000,
             }),
         };
 
@@ -412,8 +414,8 @@ mod test {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 2,
             trade_detail: TradeDetail::Buy(TradeItem {
-                deal_price: 2.0,
-                deal_volume: 50.0,
+                deal_price: 20000,
+                deal_volume: 5000,
             }),
         };
 
@@ -438,12 +440,12 @@ mod test {
         account.buy_with_cost(000001, &fund_data1, 100.0);
         account.buy_with_cost(000002, &fund_data2, 100.0);
 
-        assert_eq!(Some(50.0), account.get_object_volume(000001));
-        assert_eq!(Some(2.0), account.get_object_price(000001));
-        assert_eq!(Some(100.0), account.get_object_assets(000001));
-        assert_eq!(Some(50.0), account.get_object_volume(000002));
-        assert_eq!(Some(2.0), account.get_object_price(000002));
-        assert_eq!(Some(100.0), account.get_object_assets(000002));
+        assert_eq!(Some(5000), account.get_object_volume(000001));
+        assert_eq!(Some(20000), account.get_object_price(000001));
+        assert_eq!(Some(100000000), account.get_object_assets(000001));
+        assert_eq!(Some(5000), account.get_object_volume(000002));
+        assert_eq!(Some(20000), account.get_object_price(000002));
+        assert_eq!(Some(100000000), account.get_object_assets(000002));
     }
 
     #[test]
@@ -464,8 +466,8 @@ mod test {
             trade_time: fund_data1.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Buy(TradeItem {
-                deal_price: 2.0,
-                deal_volume: 50.0,
+                deal_price: 20000,
+                deal_volume: 5000,
             }),
         };
 
@@ -497,8 +499,8 @@ mod test {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
-                deal_price: 2.0,
-                deal_volume: 25.0,
+                deal_price: 20000,
+                deal_volume: 2500,
             }),
         };
 
@@ -510,7 +512,7 @@ mod test {
             &expect_trade_history,
             account.trade_history.get_mut(&1).unwrap().last().unwrap()
         );
-        assert_eq!(-50.0, account.balance_price);
+        assert_eq!(-50000000, account.balance_price);
     }
 
     #[test]
@@ -531,8 +533,8 @@ mod test {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
-                deal_price: 2.0,
-                deal_volume: 25.0,
+                deal_price: 20000,
+                deal_volume: 2500,
             }),
         };
 
@@ -544,7 +546,7 @@ mod test {
             &expect_trade_history,
             account.trade_history.get_mut(&1).unwrap().last().unwrap()
         );
-        assert_eq!(-50.0, account.balance_price);
+        assert_eq!(-50000000, account.balance_price);
     }
 
     #[test]
@@ -556,8 +558,8 @@ mod test {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
-                deal_price: 2.0,
-                deal_volume: 50.0,
+                deal_price: 20000,
+                deal_volume: 5000,
             }),
         };
 
@@ -569,7 +571,7 @@ mod test {
             &expect_trade_history,
             account.trade_history.get_mut(&1).unwrap().last().unwrap()
         );
-        assert_eq!(0.0, account.balance_price);
+        assert_eq!(0, account.balance_price);
     }
 
     #[test]
@@ -581,8 +583,8 @@ mod test {
             trade_time: fund_data2.date.with_hms(19, 0, 0).unwrap(),
             trade_obj: 1,
             trade_detail: TradeDetail::Sell(TradeItem {
-                deal_price: 2.0,
-                deal_volume: 50.0,
+                deal_price: 2000000,
+                deal_volume: 50000000,
             }),
         };
 

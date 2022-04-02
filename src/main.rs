@@ -75,7 +75,10 @@ fn main() {
     }
     println!(
         "At last, account value: {value:.2}",
-        value = result.account_value
+        value = result.account_value as f64 * 0.000001
     );
-    println!("currency: {currency:.2}", currency = result.balance_price);
+    println!(
+        "currency: {currency:.2}",
+        currency = result.balance_price as f64 * 0.000001
+    );
 }
