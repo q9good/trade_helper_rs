@@ -71,7 +71,7 @@ where
             .enable_all()
             .build()
             .unwrap();
-        let mutex_infos = Arc::new(Mutex::new(Vec::<Vec<T>>::new()));
+        let mutex_infos = Arc::new(Mutex::new(Vec::<(u32, Vec<T>)>::new()));
         let mut handles = Vec::with_capacity(codes.len());
         let owned_codes = codes.to_owned();
         // for i in 0..codes.len() {
@@ -81,28 +81,23 @@ where
                 let client = reqwest::Client::new();
                 let ret = T::query_history_info(code, start_date, end_date, client).await;
                 let mut copy = info_copy.lock().await;
-                copy.push(ret);
+                copy.push((code, ret));
             }));
         }
         for handle in handles {
             runtime.block_on(handle).unwrap();
         }
         let infos: Vec<_> = Arc::try_unwrap(mutex_infos).unwrap().into_inner();
-        // get the inner value of Arc<Mutex<T>>
-        // get the inner of MutexGuard<T>
-        // let infos:Vec<Vec<T>> =  mutex_infos.into_iter();
-        // lock().get_mut();
-        // let infos: Vec<Vec<T>> = codes
-        //     .iter()
-        //     .map(|x| T::query_history_info(*x, start_date, end_date, client))
-        //     // .filter(|x|!x.is_empty())
-        //     .collect();
-        #[cfg(test)]
-        println!("{:#?}", infos[0]);
-        // infos[0].iter().for_each(|x|println!("{:#?}", x.date));
+        // let mut code_infos: Vec<_> = Vec::with_capacity(infos.len());
+        let mut code_infos: Vec<Vec<_>> = vec![Vec::new(); codes.len()];
+        for (code, infos) in infos {
+            let idx = codes.iter().position(|&c| c == code).unwrap();
+            code_infos[idx] = infos;
+        }
+
         InfoMixer {
             code: codes.into(),
-            info: infos,
+            info: code_infos,
         }
     }
 }
@@ -159,7 +154,7 @@ mod tests {
     fn test_two_funds_iter() {
         let start_date = date!(2021 - 9 - 1);
         let end_date = date!(2021 - 9 - 7);
-        let codes = [002190_u32, 481010];
+        let codes = [002190, 481010];
         let fund_mixer = InfoMixer::<FundData>::new(&codes, start_date, end_date);
         fund_mixer.for_each(|(code, info)| println!("{:?}: {}", info.date, code));
     }

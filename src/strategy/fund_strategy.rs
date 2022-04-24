@@ -113,11 +113,11 @@ mod tests {
 
     #[test]
     fn test_single_aip_002021() {
-        let start_date = date!(2010 - 1 - 1);
-        let end_date = date!(2021 - 1 - 1);
+        let start_date = date!(2021 - 5 - 1);
+        let end_date = date!(2022 - 3 - 11);
         let result = run_fund_aip_strategy(start_date, end_date, 1, &[002021u32], &[100.0]);
-        assert!(result.balance_price == -13199299109);
-        assert!(result.account_value == 33704864400);
+        assert!(result.balance_price == -1099945385);
+        assert!(result.account_value == 984622500);
     }
 
     #[test]
@@ -151,17 +151,17 @@ mod tests {
 
     #[test]
     fn test_double_aip() {
-        let start_date = date!(2020 - 1 - 1);
-        let end_date = date!(2021 - 1 - 1);
+        let start_date = date!(2021 - 5 - 1);
+        let end_date = date!(2022 - 3 - 11);
         let result = run_fund_aip_strategy(
             start_date,
             end_date,
             1,
-            &[007994u32, 001875u32],
-            &[100.0, 100.0],
+            &[002021u32, 070032u32],
+            &[100.0, 200.0],
         );
-        assert!(result.balance_price == -2199832559);
-        assert!(result.account_value ==2926375618 );
+        assert!(result.balance_price == -3299853658);
+        assert!(result.account_value == 2903747740);
     }
 
     #[test]
