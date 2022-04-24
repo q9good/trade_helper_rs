@@ -43,7 +43,7 @@ pub fn run_fund_aip_strategy(
         .values()
         .map(|x| x.total_value)
         .sum();
-    fund_accounts.account_value = (cur_price as f64 / 1000000.0) as f32;
+    fund_accounts.account_value = cur_price;
     fund_accounts
 }
 
@@ -77,11 +77,10 @@ pub fn run_fund_buy_more_strategy(
                 budget *= 1.5;
             } else*/
             if fund_accounts.get_object_average_price(code).is_some()
-                && fund_accounts.get_object_average_price(code).unwrap()
-                    > fund_data.unit_nav as f32 * 0.0001
+                && fund_accounts.get_object_average_price(code).unwrap() > fund_data.unit_nav
             {
                 let avg = fund_accounts.get_object_average_price(code).unwrap();
-                budget *= avg / (fund_data.unit_nav as f32 * 0.0001);
+                budget *= (avg / fund_data.unit_nav) as f32;
             }
             #[cfg(test)]
             println!("{}", budget);
@@ -97,7 +96,7 @@ pub fn run_fund_buy_more_strategy(
         .values()
         .map(|x| x.total_value)
         .sum();
-    fund_accounts.account_value = (cur_price as f64 / 1000000.0) as f32;
+    fund_accounts.account_value = cur_price;
     fund_accounts
 }
 
@@ -114,12 +113,11 @@ mod tests {
 
     #[test]
     fn test_single_aip_002021() {
-        let start_date = date!(2010 - 1 - 1);
-        let end_date = date!(2021 - 1 - 1);
+        let start_date = date!(2021 - 5 - 1);
+        let end_date = date!(2022 - 3 - 11);
         let result = run_fund_aip_strategy(start_date, end_date, 1, &[002021u32], &[100.0]);
-        // dbg!(result.balance_price);
-        assert!((result.balance_price + 13200.0).abs() < 2.0);
-        assert!((result.account_value - 33706.85).abs() < 2.0);
+        assert!(result.balance_price == -1099945385);
+        assert!(result.account_value == 984622500);
     }
 
     #[test]
@@ -127,8 +125,8 @@ mod tests {
         let start_date = date!(2010 - 1 - 1);
         let end_date = date!(2021 - 1 - 1);
         let result = run_fund_aip_strategy(start_date, end_date, 1, &[007994u32], &[100.0]);
-        assert!((result.balance_price + 1000.0).abs() < 2.0);
-        assert!((result.account_value - 1165.89).abs() < 2.0);
+        assert!(result.balance_price == -999953076);
+        assert!(result.account_value == 1165856998);
     }
 
     #[test]
@@ -136,8 +134,8 @@ mod tests {
         let start_date = date!(2010 - 1 - 1);
         let end_date = date!(2021 - 1 - 1);
         let result = run_fund_aip_strategy(start_date, end_date, 1, &[070032u32], &[100.0]);
-        assert!((result.balance_price + 10300.0).abs() < 2.0);
-        assert!((result.account_value - 35871.4).abs() < 2.0);
+        assert!(result.balance_price == -10299379825);
+        assert!(result.account_value == 35869824690);
     }
 
     #[test]
@@ -145,23 +143,25 @@ mod tests {
         let start_date = date!(2010 - 1 - 1);
         let end_date = date!(2021 - 1 - 1);
         let result = run_fund_aip_strategy(start_date, end_date, 1, &[001875u32], &[100.0]);
-        assert!((result.balance_price + 5700.0).abs() < 2.0);
-        assert!((result.account_value - 15580.94).abs() < 2.0);
+        dbg!(result.balance_price);
+        dbg!(result.account_value);
+        assert!(result.balance_price == -5699578241);
+        assert!(result.account_value == 15579877710);
     }
 
     #[test]
     fn test_double_aip() {
-        let start_date = date!(2020 - 1 - 1);
-        let end_date = date!(2021 - 1 - 1);
+        let start_date = date!(2021 - 5 - 1);
+        let end_date = date!(2022 - 3 - 11);
         let result = run_fund_aip_strategy(
             start_date,
             end_date,
             1,
-            &[007994u32, 001875u32],
-            &[100.0, 100.0],
+            &[002021u32, 070032u32],
+            &[100.0, 200.0],
         );
-        assert!((result.balance_price + 2200.0).abs() < 2.0);
-        assert!((result.account_value - 2926.58).abs() < 2.0);
+        assert!(result.balance_price == -3299853658);
+        assert!(result.account_value == 2903747740);
     }
 
     #[test]
@@ -175,8 +175,8 @@ mod tests {
             &[007994u32, 001875u32, 070032u32],
             &[100.0, 100.0, 100.0],
         );
-        assert!((result.balance_price + 3400.0).abs() < 2.0);
-        assert!((result.account_value - 4703.69).abs() < 2.0);
+        assert!(result.balance_price == -3399714285);
+        assert!(result.account_value == 4703306658);
     }
 
     #[test]

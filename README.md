@@ -9,8 +9,8 @@
 # Usage/使用说明
 ----
  trade_helper_rs [OPTIONS] --begin <BEGIN> --end <END> --FUND LIST <FUND LIST>... --BUDGET PLAN FOR FUNDS <BUDGET PLAN FOR FUNDS>...
-
-OPTIONS:
+````
+  OPTIONS:
     -b, --begin <BEGIN>
             交易开始日，格式yyyymmdd
 
@@ -34,6 +34,7 @@ OPTIONS:
 
     -V, --version
             版本信息
+````
 # Example/示例
 ----
 1. 单只基金
@@ -45,7 +46,7 @@ OPTIONS:
   网站结果如下图所示：
 ![east money](.github/east_money.png)
 2. 多只基金
-同样地，2021年5月1日至2022年3月11日期间，每月1号分别用100元和200元买入基金002021华夏回报二号混合和070032嘉实优化红利混合
+  同样地，2021年5月1日至2022年3月11日期间，每月1号分别用100元和200元买入基金002021华夏回报二号混合和070032嘉实优化红利混合
 > ./trade_helper_rs -b 20210501 -e 20220311 -f 002021 070032 -p 100 200
 
 ![multi fund](.github/multi_fund.png)
